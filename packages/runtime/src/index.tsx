@@ -200,7 +200,8 @@ function SwipRoot() {
           const previousElement = selectedElement.previousElementSibling
 
           if (!previousElement) {
-            return selectParent(selectedElement)
+            // return selectParent(selectedElement)
+            return
           }
 
           setSelectedElement(previousElement as HTMLElement)
@@ -209,7 +210,8 @@ function SwipRoot() {
           const nextElement = selectedElement.nextElementSibling
 
           if (!nextElement) {
-            return selectParent(selectedElement)
+            // return selectParent(selectedElement)
+            return
           }
 
           setSelectedElement(nextElement as HTMLElement)
@@ -344,7 +346,8 @@ function SelectionBox(props: { selectedElement: HTMLElement }) {
     <div
       style={{
         position: 'absolute',
-        border: '2px solid red',
+        outline: '2px solid #0399FF',
+        zIndex: '100',
         // background: `rgba(255, 0, 0, 0.2)`,
         ...absolutePosition,
       }}
@@ -360,7 +363,7 @@ function SelectionBoxParent(props: { selectedElement: HTMLElement }) {
     <div
       style={{
         position: 'absolute',
-        background: `rgba(0, 255, 0, 0.2)`,
+        background: 'rgba(0, 255, 0, 0.1)',
         ...absolutePosition,
       }}
     ></div>
@@ -375,7 +378,7 @@ function SelectionBoxSibling(props: { selectedElement: HTMLElement }) {
     <div
       style={{
         position: 'absolute',
-        border: '2px solid rgba(150, 150, 150)',
+        outline: '1px solid #0399FF',
         ...absolutePosition,
       }}
     ></div>
@@ -397,7 +400,7 @@ function SelectionBoxChild(props: { selectedElement: HTMLElement }) {
     <div
       style={{
         position: 'absolute',
-        border: '2px solid rgba(150, 150, 150)',
+        border: '1px solid rgba(0, 0, 0, 0.4)',
         // background: `rgba(0, 0, 255, 0.2)`,
         ...x,
       }}
@@ -429,7 +432,8 @@ function SelectedElementDetails(props: { selectedElement: HTMLElement }) {
       )}
       <div
         style={{
-          backgroundColor: 'rgba(255, 100, 100, 1)',
+          // backgroundColor: 'rgba(255, 100, 100, 1)',
+          backgroundColor: '#70C5FF',
         }}
       >
         {elemenentToString(props.selectedElement)}
