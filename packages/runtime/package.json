@@ -1,0 +1,27 @@
+{
+  "name": "runtime",
+  "main": "dist/index.js",
+  "version": "0.0.0",
+  "scripts": {
+    "lint": "eslint \"./**/*.{ts,tsx,js}\" --fix",
+    "build": "tsup src/index.tsx --format esm,cjs --dts",
+    "dev": "tsup src/ --format esm,cjs --watch --dts --sourcemap inline"
+  },
+  "devDependencies": {
+    "@babel/generator": "^7.17.12",
+    "@babel/parser": "^7.17.12",
+    "@babel/traverse": "^7.17.12",
+    "@babel/types": "^7.17.12",
+    "@types/babel__generator": "^7.6.4",
+    "@types/babel__traverse": "^7.17.1",
+    "@types/babel-core": "^6.25.7",
+    "@types/react": "^18.0.9",
+    "@types/react-dom": "^18.0.3",
+    "@types/wicg-file-system-access": "^2020.9.5",
+    "idb-keyval": "^6.1.0",
+    "kbar": "^0.1.0-beta.34",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "tsup": "^5.12.7"
+  }
+}
