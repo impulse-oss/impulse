@@ -21,6 +21,7 @@ import {
   VisualState,
 } from 'kbar'
 import { elemenentToString, elementGetAbsolutePosition } from './dom'
+import './styles.css'
 
 export function mountApp() {
   if (typeof window === 'undefined') {
@@ -289,7 +290,18 @@ function SwipApp() {
 
   return (
     <div>
-      <script src="https://cdn.tailwindcss.com"></script>
+      {/* <script src="https://cdn.tailwindcss.com"></script>
+      <script>{`
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                clifford: '#da373d',
+              }
+            }
+          }
+        }
+      `}</script> */}
 
       {selectedElement && (
         <>
@@ -322,7 +334,10 @@ function SwipApp() {
             />
           ))}
 
-          <SelectedElementDetails selectedElement={selectedElement} />
+          <SelectedElementDetails
+            selectedElement={selectedElement}
+            onElementClick={setSelectedElement}
+          />
         </>
       )}
 
@@ -346,13 +361,7 @@ function RenderResults() {
       items={results}
       onRender={({ item, active }) =>
         typeof item === 'string' ? (
-          <div
-            style={{
-              background: '#fff',
-            }}
-          >
-            {item}
-          </div>
+          <div className="bg-white">{item}</div>
         ) : (
           <div
             style={{
@@ -396,11 +405,9 @@ function SelectionBox(props: { selectedElement: HTMLElement }) {
 
   return (
     <div
+    className='pointer-events-none absolute z-[100]'
       style={{
-        pointerEvents: 'none',
-        position: 'absolute',
         outline: '2px solid #0399FF',
-        zIndex: '100',
         ...absolutePosition,
       }}
     ></div>
@@ -413,10 +420,8 @@ function SelectionBoxParent(props: { selectedElement: HTMLElement }) {
 
   return (
     <div
-      style={{
-        pointerEvents: 'none',
-        position: 'absolute',
-        background: 'rgba(0, 255, 0, 0.1)',
+    className='pointer-events-none absolute bg-[#00ff0033]'
+    style={{
         ...absolutePosition,
       }}
     ></div>
@@ -429,9 +434,8 @@ function SelectionBoxSibling(props: { selectedElement: HTMLElement }) {
 
   return (
     <div
-      style={{
-        pointerEvents: 'none',
-        position: 'absolute',
+    className='pointer-events-none absolute'
+    style={{
         outline: '1px solid #0399FF',
         ...absolutePosition,
       }}
@@ -452,40 +456,86 @@ function SelectionBoxChild(props: { selectedElement: HTMLElement }) {
 
   return (
     <div
-      style={{
-        pointerEvents: 'none',
-        position: 'absolute',
-        border: '1px solid rgba(0, 0, 0, 0.4)',
+    className='pointer-events-none absolute border border-[#717171]'
+    style={{
         ...adjustedPosition,
       }}
     ></div>
   )
 }
 
-function SelectedElementDetails(props: { selectedElement: HTMLElement }) {
+function SelectedElementDetails(props: {
+  selectedElement: HTMLElement
+  onElementClick: (element: HTMLElement) => void
+}) {
+  const { selectedElement } = props
+  const parentElement = selectedElement.parentElement
+
+  if (!parentElement) {
+    return null
+  }
+
+  const siblings = Array.from(parentElement.children) as HTMLElement[]
+  const children = Array.from(selectedElement.children) as HTMLElement[]
+
   return (
     <div
-      className="fixed w-full flex flex-col justify-center"
-      style={{
-        bottom: '5%',
-        zIndex: '99999',
-      }}
+      className="fixed w-full bottom-[5%] z-[99999]"
     >
-      {props.selectedElement.parentElement && (
-        <div
-          style={{
-            backgroundColor: 'rgba(100, 255, 100, 1)',
-          }}
-        >
-          {elemenentToString(props.selectedElement.parentElement)}
-        </div>
-      )}
       <div
+        className="mx-auto grid justify-center bg-white min-width-[680px] h-[200px]"
         style={{
-          backgroundColor: '#70C5FF',
+          gridTemplateColumns: '1fr 5fr 1fr',
         }}
       >
-        {elemenentToString(props.selectedElement)}
+        <div
+          className="flex flex-col bg-[#a6fea6] justify-center items-center cursor-pointer"
+          onClick={() => props.onElementClick(parentElement)}
+        >
+          {'<'}{parentElement.tagName.toLowerCase()}{'>'}
+          {Array.from(parentElement.classList).map(cls => {
+            return <div>{cls}</div>
+          })}
+        </div>
+        <div
+          className="flex flex-col bg-white overflow-y-auto"
+        >
+          {siblings.map((childElement) => {
+            const isSelectedElement = childElement === selectedElement
+
+            return (
+              <div
+                className="p-4 flex-shrink-0 cursor-pointer min-h-1/4"
+                style={{
+                  borderBottom: '1px solid #0399FF',
+                  outline: isSelectedElement ? `2px solid #0399FF` : 'none',
+                  outlineOffset: `-2px`,
+                }}
+                onClick={() => {
+                  props.onElementClick(childElement)
+                }}
+              >
+                {elemenentToString(childElement)}
+              </div>
+            )
+          })}
+        </div>
+        <div
+          className="flex flex-col overflow-y-auto bg-[#eeeeee]"
+        >
+          {children.map((childElement) => {
+            return (
+              <div
+                className="p-4 flex-shrink-0 cursor-pointer min-h-1/4 border-b border-[#717171]"
+                onClick={() => {
+                  props.onElementClick(childElement)
+                }}
+              >
+                {'<'}{childElement.tagName.toLowerCase()}{'>'}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
