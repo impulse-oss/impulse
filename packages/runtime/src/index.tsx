@@ -480,7 +480,7 @@ function SelectedElementDetails(props: {
 
   return (
     <div
-      className="fixed w-full bottom-[5%] z-[99999]"
+      className="fixed w-full bottom-0 z-[99999]"
     >
       <div
         className="mx-auto grid justify-center bg-white min-width-[680px] h-[200px]"
