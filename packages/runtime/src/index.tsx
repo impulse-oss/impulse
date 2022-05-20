@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { get, set } from 'idb-keyval'
 import { parse } from '@babel/parser'
@@ -14,11 +14,15 @@ import {
   KBarSearch,
   useMatches,
   NO_GROUP,
+  KBarResults,
+  useRegisterActions,
+  useKBar,
+  KBarContext,
+  VisualState,
 } from 'kbar'
+import { elemenentToString, elementGetAbsolutePosition } from './dom'
 
-mountApp()
-
-function mountApp() {
+export function mountApp() {
   if (typeof window === 'undefined') {
     return
   }
@@ -38,28 +42,54 @@ function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource) {
   return `vscode://file${fileName}:${lineNumber}:${columnNumber}`
 }
 
-function SwipRoot() {
+export function SwipRoot() {
+  return (
+    <KBarProvider>
+      <SwipApp />
+    </KBarProvider>
+  )
+}
+
+function SwipApp() {
   const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(
     null,
   )
 
+  const kbarContext = useContext(KBarContext)
+
   // jump
-  useEffect(() => {
-    ;(window as any).JUMP = () => {
-      if (!selectedElement) {
-        return
-      }
-
-      const fiber = getReactFiber(selectedElement)
-      if (!fiber) {
-        return
-      }
-
-      const source = fiber._debugSource
-      const vscodeLink = makeVscodeLink(source)
-      window.open(vscodeLink)
+  const jumpToCode = () => {
+    if (!selectedElement) {
+      return
     }
+
+    const fiber = getReactFiber(selectedElement)
+    if (!fiber) {
+      return
+    }
+
+    const source = fiber._debugSource
+    const vscodeLink = makeVscodeLink(source)
+    window.open(vscodeLink)
+  }
+
+  useEffect(() => {
+    ;(window as any).JUMP = jumpToCode
   }, [selectedElement])
+
+  useRegisterActions(
+    [
+      {
+        id: 'jump-to-code',
+        name: 'Jump to code',
+        shortcut: ['c'],
+        keywords: 'jump code',
+        section: 'General',
+        perform: () => jumpToCode(),
+      },
+    ],
+    [selectedElement],
+  )
 
   // read
   useEffect(() => {
@@ -184,6 +214,10 @@ function SwipRoot() {
         return
       }
 
+      if (kbarContext.getState().visualState === VisualState.showing) {
+        return
+      }
+
       const selectParent = (element: HTMLElement) => {
         const parent = element.parentElement
         if (!parent) {
@@ -200,7 +234,6 @@ function SwipRoot() {
           const previousElement = selectedElement.previousElementSibling
 
           if (!previousElement) {
-            // return selectParent(selectedElement)
             return
           }
 
@@ -210,7 +243,6 @@ function SwipRoot() {
           const nextElement = selectedElement.nextElementSibling
 
           if (!nextElement) {
-            // return selectParent(selectedElement)
             return
           }
 
@@ -257,6 +289,8 @@ function SwipRoot() {
 
   return (
     <div>
+      <script src="https://cdn.tailwindcss.com"></script>
+
       {selectedElement && (
         <>
           <SelectionBox selectedElement={selectedElement} />
@@ -292,27 +326,45 @@ function SwipRoot() {
         </>
       )}
 
-      <KBarProvider actions={[]}>
-        <KBarPortal>
-          <KBarPositioner>
-            <KBarAnimator>
-              <KBarSearch /> 
-            </KBarAnimator>
-          </KBarPositioner>
-        </KBarPortal>
-      </KBarProvider>
+      <KBarPortal>
+        <KBarPositioner>
+          <KBarAnimator>
+            <KBarSearch />
+            <RenderResults />
+          </KBarAnimator>
+        </KBarPositioner>
+      </KBarPortal>
     </div>
   )
 }
 
-function elementGetAbsolutePosition(element: HTMLElement) {
-  const rect = element.getBoundingClientRect()
-  return {
-    top: rect.top + window.scrollY,
-    left: rect.left + window.scrollX,
-    width: rect.width,
-    height: rect.height,
-  }
+function RenderResults() {
+  const { results } = useMatches()
+
+  return (
+    <KBarResults
+      items={results}
+      onRender={({ item, active }) =>
+        typeof item === 'string' ? (
+          <div
+            style={{
+              background: '#fff',
+            }}
+          >
+            {item}
+          </div>
+        ) : (
+          <div
+            style={{
+              background: active ? '#eee' : '#fff',
+            }}
+          >
+            {item.name}
+          </div>
+        )
+      }
+    />
+  )
 }
 
 function getReactFiber(element: HTMLElement) {
@@ -345,10 +397,10 @@ function SelectionBox(props: { selectedElement: HTMLElement }) {
   return (
     <div
       style={{
+        pointerEvents: 'none',
         position: 'absolute',
         outline: '2px solid #0399FF',
         zIndex: '100',
-        // background: `rgba(255, 0, 0, 0.2)`,
         ...absolutePosition,
       }}
     ></div>
@@ -362,6 +414,7 @@ function SelectionBoxParent(props: { selectedElement: HTMLElement }) {
   return (
     <div
       style={{
+        pointerEvents: 'none',
         position: 'absolute',
         background: 'rgba(0, 255, 0, 0.1)',
         ...absolutePosition,
@@ -377,6 +430,7 @@ function SelectionBoxSibling(props: { selectedElement: HTMLElement }) {
   return (
     <div
       style={{
+        pointerEvents: 'none',
         position: 'absolute',
         outline: '1px solid #0399FF',
         ...absolutePosition,
@@ -389,7 +443,7 @@ function SelectionBoxChild(props: { selectedElement: HTMLElement }) {
   const { selectedElement } = props
   const absolutePosition = elementGetAbsolutePosition(selectedElement)
 
-  const x = {
+  const adjustedPosition = {
     top: absolutePosition.top + 1,
     left: absolutePosition.left + 1,
     width: absolutePosition.width - 2,
@@ -399,10 +453,10 @@ function SelectionBoxChild(props: { selectedElement: HTMLElement }) {
   return (
     <div
       style={{
+        pointerEvents: 'none',
         position: 'absolute',
         border: '1px solid rgba(0, 0, 0, 0.4)',
-        // background: `rgba(0, 0, 255, 0.2)`,
-        ...x,
+        ...adjustedPosition,
       }}
     ></div>
   )
@@ -411,13 +465,9 @@ function SelectionBoxChild(props: { selectedElement: HTMLElement }) {
 function SelectedElementDetails(props: { selectedElement: HTMLElement }) {
   return (
     <div
+      className="fixed w-full flex flex-col justify-center"
       style={{
-        position: 'fixed',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
         bottom: '5%',
-        width: '100%',
         zIndex: '99999',
       }}
     >
@@ -432,7 +482,6 @@ function SelectedElementDetails(props: { selectedElement: HTMLElement }) {
       )}
       <div
         style={{
-          // backgroundColor: 'rgba(255, 100, 100, 1)',
           backgroundColor: '#70C5FF',
         }}
       >
@@ -441,13 +490,3 @@ function SelectedElementDetails(props: { selectedElement: HTMLElement }) {
     </div>
   )
 }
-
-function elemenentToString(element: HTMLElement) {
-  return `<${element.tagName.toLocaleLowerCase()} ${Array.from(
-    element.attributes,
-  )
-    .map((attribute) => `${attribute.name}="${attribute.value}"`)
-    .join(' ')}>`
-}
-
-export default SwipRoot

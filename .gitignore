@@ -13,6 +13,7 @@ coverage
 out/
 build
 dist/
+dist-prod/
 /swip/
 
 # misc
