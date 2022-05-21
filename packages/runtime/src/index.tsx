@@ -502,7 +502,7 @@ function SelectedElementDetails(props: {
   return (
     <div className="fixed w-full bottom-[5%] z-[99999] text-xs font-mono">
       <div
-        className="mx-auto drop-shadow-xl grid justify-center w-5/6 bg-white min-width-[680px] h-[200px] rounded-lg"
+        className="mx-auto drop-shadow-xl grid justify-center w-2/3 bg-white min-width-[680px] h-[200px] rounded-lg border border-slate-300"
         style={{
           gridTemplateColumns: '1fr 5fr 1fr',
         }}
@@ -539,7 +539,7 @@ function SelectedElementDetails(props: {
             )
           })}
         </div>
-        <div className="flex flex-col overflow-y-auto bg-[#eeeeee] h-[200px] justify-center items-center rounded-r-lg">
+        <div className="flex flex-col overflow-y-auto bg-[#eeeeee] justify-center items-center rounded-r-lg">
           {children.map((childElement) => {
             return (
               <div>
