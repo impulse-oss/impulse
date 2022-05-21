@@ -399,13 +399,34 @@ type Fiber = {
   _debugSource: FiberSource
 }
 
+function SiblingElement(props: { siblingElement: HTMLElement }) {
+  const { siblingElement } = props
+
+  return (
+    <div>
+      &lt;
+      <b>{siblingElement.tagName.toLocaleLowerCase()}</b>
+      {Array.from(siblingElement.attributes).map((attribute) => {
+        return (
+          <span>
+            {' '}
+            <span className="whitespace-nowrap">{attribute.name}</span>=
+            <span className="text-red-700">"{attribute.value}"</span>
+          </span>
+        )
+      })}
+      &gt;
+    </div>
+  )
+}
+
 function SelectionBox(props: { selectedElement: HTMLElement }) {
   const { selectedElement } = props
   const absolutePosition = elementGetAbsolutePosition(selectedElement)
 
   return (
     <div
-    className='pointer-events-none absolute z-[100]'
+      className="pointer-events-none absolute z-[100]"
       style={{
         outline: '2px solid #0399FF',
         ...absolutePosition,
@@ -420,8 +441,8 @@ function SelectionBoxParent(props: { selectedElement: HTMLElement }) {
 
   return (
     <div
-    className='pointer-events-none absolute bg-[#00ff0033]'
-    style={{
+      className="pointer-events-none absolute bg-[#00ff0033]"
+      style={{
         ...absolutePosition,
       }}
     ></div>
@@ -434,8 +455,8 @@ function SelectionBoxSibling(props: { selectedElement: HTMLElement }) {
 
   return (
     <div
-    className='pointer-events-none absolute'
-    style={{
+      className="pointer-events-none absolute"
+      style={{
         outline: '1px solid #0399FF',
         ...absolutePosition,
       }}
@@ -456,8 +477,8 @@ function SelectionBoxChild(props: { selectedElement: HTMLElement }) {
 
   return (
     <div
-    className='pointer-events-none absolute border border-[#717171]'
-    style={{
+      className="pointer-events-none absolute border border-[#717171]"
+      style={{
         ...adjustedPosition,
       }}
     ></div>
@@ -479,27 +500,25 @@ function SelectedElementDetails(props: {
   const children = Array.from(selectedElement.children) as HTMLElement[]
 
   return (
-    <div
-      className="fixed w-full bottom-[5%] z-[99999]"
-    >
+    <div className="fixed w-full bottom-[5%] z-[99999] text-xs font-mono">
       <div
-        className="mx-auto grid justify-center bg-white min-width-[680px] h-[200px]"
+        className="mx-auto drop-shadow-xl grid justify-center w-5/6 bg-white min-width-[680px] h-[200px] rounded-lg"
         style={{
           gridTemplateColumns: '1fr 5fr 1fr',
         }}
       >
         <div
-          className="flex flex-col bg-[#a6fea6] justify-center items-center cursor-pointer"
+          className="flex flex-col bg-[#a6fea6] justify-center items-center cursor-pointer rounded-l-lg"
           onClick={() => props.onElementClick(parentElement)}
         >
-          {'<'}{parentElement.tagName.toLowerCase()}{'>'}
-          {Array.from(parentElement.classList).map(cls => {
+          {'<'}
+          {parentElement.tagName.toLowerCase()}
+          {'>'}
+          {Array.from(parentElement.classList).map((cls) => {
             return <div>{cls}</div>
           })}
         </div>
-        <div
-          className="flex flex-col bg-white overflow-y-auto"
-        >
+        <div className="flex flex-col bg-white overflow-y-auto">
           {siblings.map((childElement) => {
             const isSelectedElement = childElement === selectedElement
 
@@ -515,23 +534,18 @@ function SelectedElementDetails(props: {
                   props.onElementClick(childElement)
                 }}
               >
-                {elemenentToString(childElement)}
+                <SiblingElement siblingElement={childElement} />
               </div>
             )
           })}
         </div>
-        <div
-          className="flex flex-col overflow-y-auto bg-[#eeeeee]"
-        >
+        <div className="flex flex-col overflow-y-auto bg-[#eeeeee] h-[200px] justify-center items-center rounded-r-lg">
           {children.map((childElement) => {
             return (
-              <div
-                className="p-4 flex-shrink-0 cursor-pointer min-h-1/4 border-b border-[#717171]"
-                onClick={() => {
-                  props.onElementClick(childElement)
-                }}
-              >
-                {'<'}{childElement.tagName.toLowerCase()}{'>'}
+              <div>
+                {'<'}
+                {childElement.tagName.toLowerCase()}
+                {'>'}
               </div>
             )
           })}
