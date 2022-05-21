@@ -502,7 +502,7 @@ function SelectedElementDetails(props: {
   return (
     <div className="fixed w-full bottom-0 z-[99999] text-xs font-mono">
       <div
-        className="mx-auto drop-shadow-lg grid justify-center w-2/3 bg-white min-width-[680px] h-[200px] rounded-t-lg border border-slate-300"
+        className="mx-auto drop-shadow-lg grid justify-center w-2/3 bg-white min-width-[680px] h-[200px] rounded-t-lg border-t border-x border-slate-300"
         style={{
           gridTemplateColumns: '1fr 5fr 1fr',
         }}
