@@ -500,15 +500,15 @@ function SelectedElementDetails(props: {
   const children = Array.from(selectedElement.children) as HTMLElement[]
 
   return (
-    <div className="fixed w-full bottom-[5%] z-[99999] text-xs font-mono">
+    <div className="fixed w-full bottom-0 z-[99999] text-xs font-mono">
       <div
-        className="mx-auto drop-shadow-xl grid justify-center w-2/3 bg-white min-width-[680px] h-[200px] rounded-lg border border-slate-300"
+        className="mx-auto drop-shadow-lg grid justify-center w-2/3 bg-white min-width-[680px] h-[200px] rounded-t-lg border border-slate-300"
         style={{
           gridTemplateColumns: '1fr 5fr 1fr',
         }}
       >
         <div
-          className="flex flex-col bg-[#a6fea6] justify-center items-center cursor-pointer rounded-l-lg"
+          className="flex flex-col bg-[#a6fea6] justify-center items-center cursor-pointer rounded-tl-lg"
           onClick={() => props.onElementClick(parentElement)}
         >
           {'<'}
@@ -539,10 +539,13 @@ function SelectedElementDetails(props: {
             )
           })}
         </div>
-        <div className="flex flex-col overflow-y-auto bg-[#eeeeee] justify-center items-center rounded-r-lg">
+        <div className="flex flex-col overflow-y-auto bg-[#eeeeee] justify-center items-center rounded-tr-lg">
           {children.map((childElement) => {
             return (
-              <div>
+              <div
+                className="cursor-pointer"
+                onClick={() => props.onElementClick(childElement)}
+              >
                 {'<'}
                 {childElement.tagName.toLowerCase()}
                 {'>'}
