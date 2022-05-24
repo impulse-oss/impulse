@@ -1,9 +1,7 @@
-import { useContext, useEffect, useRef, useState } from 'react'
-import { get, set } from 'idb-keyval'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
-import { transform } from '@babel/standalone'
-import { detectRootPath, fileToText, fsGetFile, fsWriteToFile } from './fs'
+import { fsGetSourceForElement, fsWriteToFile, useDirHandle } from './fs'
 import {
   KBarProvider,
   KBarPortal,
@@ -15,9 +13,12 @@ import {
   useRegisterActions,
   KBarContext,
   VisualState,
+  useKBar,
 } from 'kbar'
 import { elementGetAbsolutePosition } from './dom'
 import { ElementNavbar } from './navbar'
+import { isSourceJsxElement, transformCode } from './ast'
+import { getReactFiber, FiberSource } from './react-source'
 
 export function SwipRoot() {
   return (
@@ -29,26 +30,58 @@ export function SwipRoot() {
         left: 0,
       }}
     >
-      <KBarProvider>
+      <KBarProvider options={{ disableScrollbarManagement: true }}>
         <SwipApp />
       </KBarProvider>
     </div>
   )
 }
 
+const SwipAppContext = createContext<{
+  selectedElement: HTMLElement | null
+  __rerenderValue: number
+  rerender: () => void
+}>({ __rerenderValue: 0, selectedElement: null, rerender: () => {} })
+
 function SwipApp() {
   const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(
     null,
   )
 
-  const kbarContext = useContext(KBarContext)
+  const { currentRootActionId, searchQuery } = useKBar((state) => {
+    return {
+      currentRootActionId: state.currentRootActionId,
+      searchQuery: state.searchQuery,
+    }
+  })
 
-  // jump
-  const jumpToCode = () => {
+  useEffect(() => {
     if (!selectedElement) {
       return
     }
 
+    const observer = new MutationObserver(() => {
+      rerender()
+    })
+
+    observer.observe(selectedElement, {
+      attributes: true,
+      subtree: true,
+      childList: true,
+    })
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [selectedElement])
+
+  const [__rerenderValue, __setRerenderValue] = useState(0)
+  const rerender = () => __setRerenderValue(Math.random())
+  ;(window as any).R = rerender
+
+  const kbarContext = useContext(KBarContext)
+
+  const jumpToCode = (selectedElement: HTMLElement) => {
     const fiber = getReactFiber(selectedElement)
     if (!fiber) {
       return
@@ -59,25 +92,198 @@ function SwipApp() {
     window.open(vscodeLink)
   }
 
-  useEffect(() => {
-    ;(window as any).JUMP = jumpToCode
-  }, [selectedElement])
+  const removeClass = async (
+    selectedElement: HTMLElement,
+    classNameToRemove: string,
+  ) => {
+    const sourceFile = await fsGetSourceForElement(
+      selectedElement,
+      getDirHandle,
+    )
+    if (!sourceFile) {
+      return
+    }
+
+    const visitor: TraverseOptions = {
+      JSXElement({ node }) {
+        if (!isSourceJsxElement(node, sourceFile.fiberSource)) {
+          return
+        }
+
+        const attributes = node.openingElement.attributes
+
+        const existingClassNameAttribute = attributes.find(
+          (attribute) =>
+            attribute.type === 'JSXAttribute' &&
+            attribute.name.name === 'className',
+        ) as t.JSXAttribute
+
+        if (!existingClassNameAttribute) {
+          return
+        }
+
+        const classNameAttrValue = existingClassNameAttribute.value
+        if (classNameAttrValue?.type !== 'StringLiteral') {
+          return
+        }
+
+        const classList = classNameAttrValue.value.trim().split(' ')
+        const newClassList = classList.filter(
+          (className) => className !== classNameToRemove,
+        )
+
+        if (newClassList.length === 0) {
+          node.openingElement.attributes = attributes.filter((attribute) => {
+            if (attribute.type !== 'JSXAttribute') {
+              return true
+            }
+
+            return attribute.name.name !== existingClassNameAttribute.name.name
+          })
+          return
+        }
+
+        existingClassNameAttribute.value = t.stringLiteral(
+          newClassList.join(' '),
+        )
+      },
+    }
+
+    const code = transformCode(sourceFile.text, visitor).code!
+
+    selectedElement.classList.remove(classNameToRemove)
+    if (selectedElement.classList.length === 0) {
+      selectedElement.removeAttribute('class')
+    }
+    await fsWriteToFile(sourceFile.fileHandle, code)
+    rerender()
+  }
+
+  const addClass = async (
+    selectedElement: HTMLElement,
+    classNameToAdd: string,
+  ) => {
+    const sourceFile = await fsGetSourceForElement(
+      selectedElement,
+      getDirHandle,
+    )
+    if (!sourceFile) {
+      return
+    }
+
+    const visitor: TraverseOptions = {
+      JSXElement(path) {
+        if (!isSourceJsxElement(path.node, sourceFile.fiberSource)) {
+          return
+        }
+
+        const attributes = path.node.openingElement.attributes
+
+        const existingClassNameAttribute = attributes.find(
+          (attribute) =>
+            attribute.type === 'JSXAttribute' &&
+            attribute.name.name === 'className',
+        ) as t.JSXAttribute
+
+        if (existingClassNameAttribute) {
+          if (existingClassNameAttribute.value?.type !== 'StringLiteral') {
+            return
+          }
+
+          const classList = existingClassNameAttribute.value.value.split(' ')
+          if (classList.includes(classNameToAdd)) {
+            return
+          }
+
+          classList.push(classNameToAdd)
+          existingClassNameAttribute.value = t.stringLiteral(
+            classList.join(' ').trim(),
+          )
+
+          return
+        }
+
+        const className = t.jsxAttribute(
+          t.jsxIdentifier('className'),
+          t.stringLiteral(classNameToAdd),
+        )
+
+        attributes.push(className)
+      },
+    }
+
+    const code = transformCode(sourceFile.text, visitor).code!
+
+    selectedElement.classList.add(classNameToAdd)
+    await fsWriteToFile(sourceFile.fileHandle, code)
+    rerender()
+  }
 
   useRegisterActions(
     [
-      {
-        id: 'jump-to-code',
-        name: 'Jump to code',
-        shortcut: ['c'],
-        keywords: 'jump code',
-        section: 'General',
-        perform: () => jumpToCode(),
-      },
+      ...(selectedElement
+        ? [
+            {
+              id: 'jump-to-code',
+              name: 'Jump to code',
+              shortcut: ['c'],
+              keywords: 'jump code',
+              section: 'General',
+              perform: () => selectedElement && jumpToCode(selectedElement),
+            },
+
+            {
+              id: 'add-class',
+              name: 'Add class',
+              shortcut: [],
+              keywords: 'add class',
+              section: 'General',
+            },
+
+            ...(currentRootActionId === 'add-class' && searchQuery !== ''
+              ? [
+                  {
+                    id: `add-class-custom-${searchQuery}`,
+                    name: `> ${searchQuery}`,
+                    shortcut: [],
+                    section: 'Add class',
+                    parent: 'add-class',
+                    perform: () => {
+                      selectedElement && addClass(selectedElement, searchQuery)
+                    },
+                  },
+                ]
+              : []),
+
+            ...(selectedElement.classList.length > 0
+              ? [
+                  {
+                    id: 'remove-class',
+                    name: 'Remove class',
+                    shortcut: [],
+                    keywords: 'remove class',
+                    section: 'General',
+                  },
+
+                  ...Array.from(selectedElement.classList).map((className) => ({
+                    id: `remove-class-${className}`,
+                    name: `${className}`,
+                    shortcut: [],
+                    section: 'Remove class',
+                    parent: 'remove-class',
+                    perform: () =>
+                      selectedElement &&
+                      removeClass(selectedElement, className),
+                  })),
+                ]
+              : []),
+          ]
+        : []),
     ],
-    [selectedElement],
+    [selectedElement, __rerenderValue, currentRootActionId, searchQuery],
   )
 
-  const dirHandlerRef = useRef<FileSystemDirectoryHandle | null>(null)
+  const { getDirHandle } = useDirHandle()
 
   // read
   useEffect(() => {
@@ -86,62 +292,17 @@ function SwipApp() {
         return
       }
 
-      const fiber = getReactFiber(selectedElement)
-      if (!fiber) {
+      const sourceFile = await fsGetSourceForElement(
+        selectedElement,
+        getDirHandle,
+      )
+      if (!sourceFile) {
         return
       }
 
-      const source = fiber._debugSource
-
-      const dirHandler = await (async () => {
-        const handlerFromRef = dirHandlerRef.current
-
-        if (handlerFromRef) {
-          return handlerFromRef
-        }
-
-        const handlerFromIdb = (await get(
-          'dirHandler',
-        )) as FileSystemDirectoryHandle
-
-        if (handlerFromIdb) {
-          return handlerFromIdb
-        }
-
-        const dirHandler = await window.showDirectoryPicker()
-        await set('dirHandler', dirHandler)
-        return dirHandler
-      })()
-
-      if (
-        (await dirHandler.queryPermission({ mode: 'readwrite' })) !== 'granted'
-      ) {
-        await dirHandler.requestPermission({ mode: 'readwrite' })
-        await set('dirHandler', dirHandler)
-      }
-
-      const rootPath = await detectRootPath(dirHandler, source.fileName)
-
-      if (!rootPath) {
-        return
-      }
-
-      const relativePath = source.fileName.replace(rootPath, '')
-      const fileHandle = await fsGetFile(dirHandler, relativePath)
-
-      if (!fileHandle) {
-        return
-      }
-
-      const text = await fileToText(await fileHandle.getFile())
-
-      const traverseOptions: TraverseOptions = {
+      const visitor: TraverseOptions = {
         JSXElement(path) {
-          const loc = path.node.openingElement.name.loc
-          const isTargetTag =
-            loc?.start.line === source.lineNumber &&
-            loc?.start.column === source.columnNumber
-          if (!isTargetTag) {
+          if (!isSourceJsxElement(path.node, sourceFile.fiberSource)) {
             return
           }
 
@@ -169,20 +330,9 @@ function SwipApp() {
         },
       }
 
-      const code = transform(text, {
-        plugins: [{ visitor: traverseOptions }],
-        parserOpts: {
-          sourceType: 'unambiguous',
-          plugins: ['typescript', 'jsx'],
-        },
-        generatorOpts: {
-          retainLines: true,
-          comments: true,
-          retainFunctionParens: true,
-        },
-      }).code!
+      const code = transformCode(sourceFile.text, visitor).code!
 
-      await fsWriteToFile(fileHandle, code)
+      await fsWriteToFile(sourceFile.fileHandle, code)
     }
   }, [selectedElement])
 
@@ -292,24 +442,17 @@ function SwipApp() {
   }, [selectedElement])
 
   return (
+    // <SwipAppContext.Provider
+    //   value={{
+    //     selectedElement,
+    //     __rerenderValue,
+    //     rerender,
+    //   }}
+    // >
     <div>
-      {/* <script src="https://cdn.tailwindcss.com"></script>
-      <script>{`
-        tailwind.config = {
-          theme: {
-            extend: {
-              colors: {
-                clifford: '#da373d',
-              }
-            }
-          }
-        }
-      `}</script> */}
-
       {selectedElement && (
         <>
           <SelectionBox selectedElement={selectedElement} />
-
           {selectedElement.parentElement && (
             <>
               <SelectionBoxParent
@@ -329,21 +472,18 @@ function SwipApp() {
                 })}
             </>
           )}
-
           {Array.from(selectedElement.children).map((child, idx) => (
             <SelectionBoxChild
               key={idx}
               selectedElement={child as HTMLElement}
             />
           ))}
-
           <ElementNavbar
             selectedElement={selectedElement}
             onElementClick={setSelectedElement}
           />
         </>
       )}
-
       <KBarPortal>
         <KBarPositioner>
           <KBarAnimator>
@@ -353,6 +493,7 @@ function SwipApp() {
         </KBarPositioner>
       </KBarPortal>
     </div>
+    // </SwipAppContext.Provider>
   )
 }
 
@@ -377,29 +518,6 @@ function RenderResults() {
       }
     />
   )
-}
-
-function getReactFiber(element: HTMLElement) {
-  const key = Object.keys(element).find((key) => {
-    return key.startsWith('__reactFiber$')
-  })
-
-  if (!key) {
-    return null
-  }
-
-  const domFiber = element[key as keyof typeof element] as unknown as Fiber
-  return domFiber
-}
-
-type FiberSource = {
-  fileName: string
-  lineNumber: number
-  columnNumber: number
-}
-
-type Fiber = {
-  _debugSource: FiberSource
 }
 
 function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource) {

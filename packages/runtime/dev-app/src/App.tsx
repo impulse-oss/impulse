@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import logo from './logo.svg'
 import './App.css'
-
-import {SwipRoot} from '../../src/app'
+import { SwipRoot } from '../../src/app'
 import '../../dist/index.css'
 
 function App() {

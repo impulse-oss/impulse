@@ -27,17 +27,18 @@ export function ElementNavbar(props: {
           {'<'}
           {parentElement.tagName.toLowerCase()}
           {'>'}
-          {Array.from(parentElement.classList).map((cls) => {
-            return <div>{cls}</div>
+          {Array.from(parentElement.classList).map((cls, idx) => {
+            return <div key={idx}>{cls}</div>
           })}
         </div>
         <div className="flex flex-col bg-white overflow-y-auto">
-          {siblings.map((childElement) => {
+          {siblings.map((childElement, idx) => {
             const isSelectedElement = childElement === selectedElement
 
             return (
               <div
-                className="p-4 flex-shrink-0 cursor-pointer min-h-1/4"
+              key={idx}
+              className="p-4 flex-shrink-0 cursor-pointer min-h-1/4"
                 style={{
                   borderBottom: '1px solid #0399FF',
                   outline: isSelectedElement ? `2px solid #0399FF` : 'none',
@@ -47,15 +48,16 @@ export function ElementNavbar(props: {
                   props.onElementClick(childElement)
                 }}
               >
-                <SiblingElement siblingElement={childElement} />
+                <ElementDetails element={childElement} />
               </div>
             )
           })}
         </div>
         <div className="flex flex-col overflow-y-auto bg-[#eeeeee] justify-center items-center rounded-tr-lg">
-          {children.map((childElement) => {
+          {children.map((childElement, idx) => {
             return (
               <div
+              key={idx}
                 className="cursor-pointer"
                 onClick={() => props.onElementClick(childElement)}
               >
@@ -71,16 +73,16 @@ export function ElementNavbar(props: {
   )
 }
 
-function SiblingElement(props: { siblingElement: HTMLElement }) {
-  const { siblingElement } = props
+function ElementDetails(props: { element: HTMLElement }) {
+  const { element } = props
 
   return (
     <div>
       {'<'}
-      <b>{siblingElement.tagName.toLocaleLowerCase()}</b>
-      {Array.from(siblingElement.attributes).map((attribute) => {
+      <b>{element.tagName.toLocaleLowerCase()}</b>
+      {Array.from(element.attributes).map((attribute, idx) => {
         return (
-          <span>
+          <span key={attribute.name + idx}>
             {' '}
             <span className="whitespace-nowrap">{attribute.name}</span>=
             <span className="text-red-700">"{attribute.value}"</span>

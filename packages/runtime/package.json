@@ -8,8 +8,8 @@
   "version": "0.0.1",
   "scripts": {
     "lint": "eslint \"./**/*.{ts,tsx,js}\" --fix",
-    "build": "tsup src/index.tsx -d dist-prod --format cjs --dts --inject-style",
-    "dev": "tsup src/index.tsx -d dist --format cjs --watch --dts --sourcemap inline",
+    "build": "tsup src/index.tsx -d dist-prod --format cjs --dts --inject-style --inject ./src/react-shim.js",
+    "dev": "tsup src/index.tsx -d dist --format cjs --watch --dts --sourcemap inline --inject ./src/react-shim.js",
     "dev-app": "cd dev-app && vite --port 3005",
     "publish-stable": "npm publish"
   },

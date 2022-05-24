@@ -1,3 +1,56 @@
+import { get, set } from 'idb-keyval'
+import { useRef } from 'react'
+import { getReactFiber } from './react-source'
+
+export async function fsGetSourceForElement(
+  element: HTMLElement,
+  requestDirHandle: () => Promise<FileSystemDirectoryHandle | null>,
+) {
+  const fiber = getReactFiber(element)
+  if (!fiber) {
+    return null
+  }
+
+  const source = fiber._debugSource
+
+  const dirHandle = await requestDirHandle()
+  if (!dirHandle) {
+    return null
+  }
+
+  const contents = await fsGetFileContents(dirHandle, source.fileName)
+  if (!contents) {
+    return null
+  }
+
+  return {
+    ...contents,
+    fiberSource: source,
+  }
+}
+
+export async function fsGetFileContents(
+  dirHandle: FileSystemDirectoryHandle,
+  path: string,
+) {
+  const rootPath = await detectRootPath(dirHandle, path)
+
+  if (!rootPath) {
+    return
+  }
+
+  const relativePath = path.replace(rootPath, '')
+  const fileHandle = await fsGetFile(dirHandle, relativePath)
+
+  if (!fileHandle) {
+    return
+  }
+
+  const text = await fileToText(await fileHandle.getFile())
+
+  return { text, fileHandle }
+}
+
 export async function fsGetFile(
   dirHandle: FileSystemDirectoryHandle,
   path: string,
@@ -78,4 +131,42 @@ export function fileToText(file: File): Promise<string> {
     }
     reader.readAsText(file)
   })
+}
+
+export function useDirHandle() {
+  const dirHandlerRef = useRef<FileSystemDirectoryHandle | null>(null)
+
+  const getDirHandle = async () => {
+    const dirHandler = await (async () => {
+      const handlerFromRef = dirHandlerRef.current
+
+      if (handlerFromRef) {
+        return handlerFromRef
+      }
+
+      const handlerFromIdb = (await get(
+        'dirHandler',
+      )) as FileSystemDirectoryHandle
+
+      if (handlerFromIdb) {
+        return handlerFromIdb
+      }
+
+      const dirHandler = await window.showDirectoryPicker()
+      dirHandlerRef.current = dirHandler
+      await set('dirHandler', dirHandler)
+      return dirHandler
+    })()
+
+    if (
+      (await dirHandler.queryPermission({ mode: 'readwrite' })) !== 'granted'
+    ) {
+      await dirHandler.requestPermission({ mode: 'readwrite' })
+      await set('dirHandler', dirHandler)
+    }
+
+    return dirHandler
+  }
+
+  return { getDirHandle }
 }
