@@ -88,6 +88,9 @@ function SwipApp() {
     }
 
     const source = fiber._debugSource
+    if (!source) {
+      return
+    }
     const vscodeLink = makeVscodeLink(source)
     window.open(vscodeLink)
   }
