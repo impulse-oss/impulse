@@ -149,6 +149,7 @@ export function useDirHandle() {
       )) as FileSystemDirectoryHandle
 
       if (handlerFromIdb) {
+        dirHandlerRef.current = handlerFromIdb
         return handlerFromIdb
       }
 
