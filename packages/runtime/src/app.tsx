@@ -490,7 +490,7 @@ function SwipApp() {
       )}
       <KBarPortal>
         <KBarPositioner className="swip-styles">
-          <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-black">
+          <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
             <KBarSearch className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0" />
             <RenderResults />
           </KBarAnimator>
@@ -512,7 +512,7 @@ function RenderResults() {
           <div className="bg-white uppercase text-xs px-4 py-2">{item}</div>
         ) : (
           <div
-            className={`flex justify-between text-slate-900 px-4 py-2 ${
+            className={`flex justify-between px-4 py-2 ${
               active ? 'bg-[#eee]' : ''
             }`}
           >
