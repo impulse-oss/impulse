@@ -626,7 +626,7 @@ function SwipApp() {
         </>
       )}
       <KBarPortal>
-        <KBarPositioner className="swip-styles">
+        <KBarPositioner className="swip-styles" style={{ zIndex: 150 }}>
           <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
             <KBarSearch className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0" />
             <RenderResults />
