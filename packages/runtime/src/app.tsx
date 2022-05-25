@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
 import { fsGetSourceForElement, fsWriteToFile, useDirHandle } from './fs'
@@ -15,10 +15,16 @@ import {
   VisualState,
   useKBar,
 } from 'kbar'
-import { elementGetAbsolutePosition } from './dom'
+import { elementGetAbsolutePosition, observeElement } from './dom'
 import { ElementNavbar } from './navbar'
 import { isSourceJsxElement, transformCode } from './ast'
 import { getReactFiber, FiberSource } from './react-source'
+
+declare global {
+  interface HTMLElement {
+    swipHide?: boolean
+  }
+}
 
 export function SwipRoot() {
   return (
@@ -45,9 +51,80 @@ const SwipAppContext = createContext<{
 }>({ __rerenderValue: 0, selectedElement: null, rerender: () => {} })
 
 function SwipApp() {
-  const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(
-    null,
-  )
+  const [selectionState, setSelectionState] = useState<
+    | {
+        type: 'elementSelected'
+        selectedElement: HTMLElement
+        parentElement: HTMLElement
+        indexInsideParent: number
+      }
+    | {
+        type: 'elementNotSelected'
+      }
+  >({ type: 'elementNotSelected' })
+
+  const setSelectedElement = (
+    selectedElement: HTMLElement,
+    parameters?: { indexInsideParent?: number },
+  ) => {
+    const parentElement = selectedElement.parentElement
+    if (!parentElement) {
+      return setSelectionState({ type: 'elementNotSelected' })
+    }
+
+    const siblings = Array.from(parentElement.children)
+    const indexInsideParent =
+      parameters?.indexInsideParent ?? siblings.indexOf(selectedElement)
+
+    setSelectionState({
+      type: 'elementSelected',
+      selectedElement,
+      parentElement: parentElement,
+      indexInsideParent,
+    })
+  }
+
+  const removeElementSelection = () => {
+    setSelectionState({ type: 'elementNotSelected' })
+  }
+
+  const onSelectedElementRemoved = () => {
+    if (selectionState.type !== 'elementSelected') {
+      return
+    }
+
+    const { parentElement, indexInsideParent } = selectionState
+    const children = [...parentElement.children]
+
+    const siblingSameSpot = children[indexInsideParent] as
+      | HTMLElement
+      | undefined
+    const siblingBefore = children[indexInsideParent - 1] as
+      | HTMLElement
+      | undefined
+    const siblingAfter = children[indexInsideParent + 1] as
+      | HTMLElement
+      | undefined
+
+    if (siblingSameSpot && !siblingSameSpot.swipHide) {
+      setSelectedElement(siblingSameSpot)
+      return
+    }
+
+    if (siblingBefore) {
+      setSelectedElement(siblingBefore)
+      return
+    }
+
+    if (siblingAfter) {
+      setSelectedElement(siblingAfter, {
+        indexInsideParent: indexInsideParent - 1,
+      })
+      return
+    }
+
+    setSelectedElement(parentElement)
+  }
 
   const { currentRootActionId, searchQuery } = useKBar((state) => {
     return {
@@ -57,30 +134,70 @@ function SwipApp() {
   })
 
   useEffect(() => {
-    if (!selectedElement) {
-      return
-    }
-
-    const observer = new MutationObserver(() => {
+    const resizeObserver = new ResizeObserver(() => {
       rerender()
     })
 
-    observer.observe(selectedElement, {
-      attributes: true,
-      subtree: true,
-      childList: true,
-    })
+    resizeObserver.observe(document.body)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  const navbarRef = useRef<HTMLDivElement>(null)
+  const originalBodyPaddingBottom = useRef('')
+
+  useEffect(() => {
+    if (selectionState.type === 'elementSelected' && navbarRef.current) {
+      originalBodyPaddingBottom.current = window.getComputedStyle(
+        document.body,
+      ).paddingBottom
+      document.body.style.paddingBottom = `${navbarRef.current.offsetHeight}px`
+      return
+    }
+
+    document.body.style.paddingBottom = originalBodyPaddingBottom.current
+  }, [selectionState.type])
+
+  useEffect(() => {
+    if (selectionState.type !== 'elementSelected') {
+      return
+    }
+
+    const { observer, parentObserver } = observeElement(
+      selectionState.selectedElement,
+      (mutations) => {
+        console.log('mutations', mutations)
+        if (
+          mutations.find((mutation) => {
+            return Array.from(mutation.removedNodes).find((node) => {
+              return node === selectionState.selectedElement
+            })
+          })
+        ) {
+          console.log('selected node is removed!!', { mutations })
+        }
+        onSelectedElementRemoved()
+
+        rerender()
+      },
+    )
 
     return () => {
       observer.disconnect()
+      if (parentObserver) {
+        parentObserver.disconnect()
+      }
     }
-  }, [selectedElement])
+  }, [selectionState])
 
   const [__rerenderValue, __setRerenderValue] = useState(0)
   const rerender = () => __setRerenderValue(Math.random())
-  ;(window as any).R = rerender
 
   const kbarContext = useContext(KBarContext)
+
+  const { getDirHandle } = useDirHandle()
 
   const jumpToCode = (selectedElement: HTMLElement) => {
     const fiber = getReactFiber(selectedElement)
@@ -92,6 +209,7 @@ function SwipApp() {
     if (!source) {
       return
     }
+
     const vscodeLink = makeVscodeLink(source)
     window.open(vscodeLink)
   }
@@ -160,7 +278,6 @@ function SwipApp() {
       selectedElement.removeAttribute('class')
     }
     await fsWriteToFile(sourceFile.fileHandle, code)
-    rerender()
   }
 
   const addClass = async (
@@ -220,12 +337,54 @@ function SwipApp() {
 
     selectedElement.classList.add(classNameToAdd)
     await fsWriteToFile(sourceFile.fileHandle, code)
-    rerender()
+  }
+
+  const removeElement = async (selectedElement: HTMLElement) => {
+    const sourceFile = await fsGetSourceForElement(
+      selectedElement,
+      getDirHandle,
+    )
+    if (!sourceFile) {
+      return
+    }
+
+    const visitor: TraverseOptions = {
+      JSXElement(path) {
+        if (!isSourceJsxElement(path.node, sourceFile.fiberSource)) {
+          return
+        }
+
+        path.remove()
+      },
+    }
+
+    const code = transformCode(sourceFile.text, visitor).code!
+
+    const oldDisplay = selectedElement.style.display
+
+    selectedElement.swipHide = true
+    selectedElement.style.display = 'none'
+    onSelectedElementRemoved()
+    await fsWriteToFile(sourceFile.fileHandle, code)
+
+    await new Promise<void>((resolve) => {
+      const observers = observeElement(selectedElement, () => {
+        observers.observer.disconnect()
+        observers.parentObserver?.disconnect()
+        resolve()
+      })
+    })
+
+    selectedElement.style.display = oldDisplay
+    if (selectedElement.getAttribute('style') === '') {
+      selectedElement.removeAttribute('style')
+    }
+    selectedElement.swipHide = false
   }
 
   useRegisterActions(
     [
-      ...(selectedElement
+      ...(selectionState.type === 'elementSelected'
         ? [
             {
               id: 'jump-to-code',
@@ -233,7 +392,9 @@ function SwipApp() {
               shortcut: ['c'],
               keywords: 'jump code',
               section: 'General',
-              perform: () => selectedElement && jumpToCode(selectedElement),
+              perform: () =>
+                selectionState.selectedElement &&
+                jumpToCode(selectionState.selectedElement),
             },
 
             {
@@ -253,13 +414,14 @@ function SwipApp() {
                     section: 'Add class',
                     parent: 'add-class',
                     perform: () => {
-                      selectedElement && addClass(selectedElement, searchQuery)
+                      selectionState.type === 'elementSelected' &&
+                        addClass(selectionState.selectedElement, searchQuery)
                     },
                   },
                 ]
               : []),
 
-            ...(selectedElement.classList.length > 0
+            ...(selectionState.selectedElement.classList.length > 0
               ? [
                   {
                     id: 'remove-class',
@@ -269,76 +431,35 @@ function SwipApp() {
                     section: 'General',
                   },
 
-                  ...Array.from(selectedElement.classList).map((className) => ({
-                    id: `remove-class-${className}`,
-                    name: `${className}`,
-                    shortcut: [],
-                    section: 'Remove class',
-                    parent: 'remove-class',
-                    perform: () =>
-                      selectedElement &&
-                      removeClass(selectedElement, className),
-                  })),
+                  ...Array.from(selectionState.selectedElement.classList).map(
+                    (className) => ({
+                      id: `remove-class-${className}`,
+                      name: `${className}`,
+                      shortcut: [],
+                      section: 'Remove class',
+                      parent: 'remove-class',
+                      perform: () =>
+                        selectionState.type === 'elementSelected' &&
+                        removeClass(selectionState.selectedElement, className),
+                    }),
+                  ),
                 ]
               : []),
+
+            {
+              section: 'General',
+              id: 'remove-element',
+              name: 'Remove element',
+              shortcut: [],
+              perform: () =>
+                selectionState.type === 'elementSelected' &&
+                removeElement(selectionState.selectedElement),
+            },
           ]
         : []),
     ],
-    [selectedElement, __rerenderValue, currentRootActionId, searchQuery],
+    [selectionState, __rerenderValue, currentRootActionId, searchQuery],
   )
-
-  const { getDirHandle } = useDirHandle()
-
-  // read
-  useEffect(() => {
-    ;(window as any).READ = async () => {
-      if (!selectedElement) {
-        return
-      }
-
-      const sourceFile = await fsGetSourceForElement(
-        selectedElement,
-        getDirHandle,
-      )
-      if (!sourceFile) {
-        return
-      }
-
-      const visitor: TraverseOptions = {
-        JSXElement(path) {
-          if (!isSourceJsxElement(path.node, sourceFile.fiberSource)) {
-            return
-          }
-
-          const attributes = path.node.openingElement.attributes
-
-          const existingClassNameAttribute = attributes.find(
-            (attribute) =>
-              attribute.type === 'JSXAttribute' &&
-              attribute.name.name === 'className',
-          ) as t.JSXAttribute
-
-          const className =
-            existingClassNameAttribute ??
-            t.jsxAttribute(t.jsxIdentifier('className'), t.stringLiteral(''))
-
-          if (className.value?.type === 'StringLiteral') {
-            className.value = t.stringLiteral(
-              `${className.value.value} text-action`,
-            )
-          }
-
-          if (!existingClassNameAttribute) {
-            attributes.push(className)
-          }
-        },
-      }
-
-      const code = transformCode(sourceFile.text, visitor).code!
-
-      await fsWriteToFile(sourceFile.fileHandle, code)
-    }
-  }, [selectedElement])
 
   // click
   useEffect(() => {
@@ -368,7 +489,7 @@ function SwipApp() {
   // keyboard
   useEffect(() => {
     const documentOnKeyDown = (event: KeyboardEvent) => {
-      if (!selectedElement) {
+      if (selectionState.type !== 'elementSelected') {
         return
       }
 
@@ -376,20 +497,21 @@ function SwipApp() {
         return
       }
 
-      const selectParent = (element: HTMLElement) => {
-        const parent = element.parentElement
-        if (!parent) {
-          return
-        }
-        setSelectedElement(parent)
+      if (event.altKey || event.ctrlKey || event.metaKey) {
+        return
       }
 
-      const actionsMap = {
+      const arrowsMap = {
         ArrowLeft: () => {
-          selectParent(selectedElement)
+          const parent = selectionState.parentElement
+          if (!parent) {
+            return
+          }
+          setSelectedElement(parent)
         },
         ArrowUp: () => {
-          const previousElement = selectedElement.previousElementSibling
+          const previousElement =
+            selectionState.selectedElement.previousElementSibling
 
           if (!previousElement) {
             return
@@ -398,7 +520,7 @@ function SwipApp() {
           setSelectedElement(previousElement as HTMLElement)
         },
         ArrowDown: () => {
-          const nextElement = selectedElement.nextElementSibling
+          const nextElement = selectionState.selectedElement.nextElementSibling
 
           if (!nextElement) {
             return
@@ -407,7 +529,7 @@ function SwipApp() {
           setSelectedElement(nextElement as HTMLElement)
         },
         ArrowRight: () => {
-          const firstChild = selectedElement.firstElementChild
+          const firstChild = selectionState.selectedElement.firstElementChild
 
           if (!firstChild) {
             return
@@ -415,15 +537,27 @@ function SwipApp() {
           setSelectedElement(firstChild as HTMLElement)
         },
         Escape: () => {
-          if (selectedElement) {
-            setSelectedElement(null)
+          if (selectionState.type === 'elementSelected') {
+            removeElementSelection()
             return true
           }
           return false
         },
       }
 
-      const action = actionsMap[event.key as keyof typeof actionsMap]
+      const homerowMap = {
+        KeyH: arrowsMap.ArrowLeft,
+        KeyJ: arrowsMap.ArrowDown,
+        KeyK: arrowsMap.ArrowUp,
+        KeyL: arrowsMap.ArrowRight,
+      }
+
+      const actionsMap = {
+        ...arrowsMap,
+        ...homerowMap,
+      }
+
+      const action = actionsMap[event.code as keyof typeof actionsMap]
       if (!action) {
         return
       }
@@ -443,7 +577,7 @@ function SwipApp() {
         capture: true,
       })
     }
-  }, [selectedElement])
+  }, [selectionState])
 
   return (
     // <SwipAppContext.Provider
@@ -454,17 +588,17 @@ function SwipApp() {
     //   }}
     // >
     <div>
-      {selectedElement && (
+      {selectionState.type === 'elementSelected' && (
         <>
-          <SelectionBox selectedElement={selectedElement} />
-          {selectedElement.parentElement && (
+          <SelectionBox selectedElement={selectionState.selectedElement} />
+          {selectionState.selectedElement.parentElement && (
             <>
               <SelectionBoxParent
-                selectedElement={selectedElement.parentElement}
+                selectedElement={selectionState.selectedElement.parentElement}
               />
-              {Array.from(selectedElement.parentElement.children)
+              {Array.from(selectionState.selectedElement.parentElement.children)
                 .filter((element) => {
-                  return element !== selectedElement
+                  return element !== selectionState.selectedElement
                 })
                 .map((element, idx) => {
                   return (
@@ -476,14 +610,17 @@ function SwipApp() {
                 })}
             </>
           )}
-          {Array.from(selectedElement.children).map((child, idx) => (
-            <SelectionBoxChild
-              key={idx}
-              selectedElement={child as HTMLElement}
-            />
-          ))}
+          {Array.from(selectionState.selectedElement.children).map(
+            (child, idx) => (
+              <SelectionBoxChild
+                key={idx}
+                selectedElement={child as HTMLElement}
+              />
+            ),
+          )}
           <ElementNavbar
-            selectedElement={selectedElement}
+            ref={navbarRef}
+            selectedElement={selectionState.selectedElement}
             onElementClick={setSelectedElement}
           />
         </>
