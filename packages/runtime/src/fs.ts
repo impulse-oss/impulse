@@ -1,12 +1,12 @@
 import { get, set } from 'idb-keyval'
 import { useRef } from 'react'
-import { getReactFiber } from './react-source'
+import { getReactFiberWithSource } from './react-source'
 
-export async function fsGetSourceForElement(
-  element: HTMLElement,
+export async function fsGetSourceForNode(
+  element: Node,
   requestDirHandle: () => Promise<FileSystemDirectoryHandle | null>,
 ) {
-  const fiber = getReactFiber(element)
+  const fiber = getReactFiberWithSource(element)
   if (!fiber) {
     return null
   }

@@ -3,24 +3,25 @@ import { ForwardedRef, forwardRef } from 'react'
 export const ElementNavbar = forwardRef(
   (
     props: {
-      selectedElement: HTMLElement
-      onElementClick: (element: HTMLElement) => void
+      selectedNode: Node
+      onNodeClick: (element: Node) => void
     },
     ref: ForwardedRef<HTMLDivElement>,
   ) => {
-    const { selectedElement } = props
+    const { selectedNode: selectedElement } = props
     const parentElement = selectedElement.parentElement
 
     if (!parentElement) {
       return null
     }
 
-    const siblings = (
-      Array.from(parentElement.children) as HTMLElement[]
-    ).filter((element) => !element.swipHide)
-    const children = (
-      Array.from(selectedElement.children) as HTMLElement[]
-    ).filter((element) => !element.swipHide)
+    const siblings = Array.from(parentElement.childNodes).filter(
+      (element) => !element.swipHide,
+    )
+
+    const children = Array.from(selectedElement.childNodes).filter(
+      (element) => !element.swipHide,
+    )
 
     return (
       <div
@@ -35,7 +36,7 @@ export const ElementNavbar = forwardRef(
         >
           <div
             className="flex flex-col bg-[#a6fea6] justify-center items-center cursor-pointer rounded-tl-lg"
-            onClick={() => props.onElementClick(parentElement)}
+            onClick={() => props.onNodeClick(parentElement)}
           >
             {'<'}
             {parentElement.tagName.toLowerCase()}
@@ -58,10 +59,10 @@ export const ElementNavbar = forwardRef(
                     outlineOffset: `-2px`,
                   }}
                   onClick={() => {
-                    props.onElementClick(childElement)
+                    props.onNodeClick(childElement)
                   }}
                 >
-                  <ElementDetails element={childElement} />
+                  <ElementDetails node={childElement} />
                 </div>
               )
             })}
@@ -72,11 +73,17 @@ export const ElementNavbar = forwardRef(
                 <div
                   key={idx}
                   className="cursor-pointer"
-                  onClick={() => props.onElementClick(childElement)}
+                  onClick={() => props.onNodeClick(childElement)}
                 >
-                  {'<'}
-                  {childElement.tagName.toLowerCase()}
-                  {'>'}
+                  {childElement instanceof HTMLElement ? (
+                    <>
+                      {'<'}
+                      {childElement.tagName.toLowerCase()}
+                      {'>'}
+                    </>
+                  ) : (
+                    '#text'
+                  )}
                 </div>
               )
             })}
@@ -87,14 +94,27 @@ export const ElementNavbar = forwardRef(
   },
 )
 
-function ElementDetails(props: { element: HTMLElement }) {
-  const { element } = props
+function ElementDetails(props: { node: Node }) {
+  const { node } = props
+
+  const truncate = (str: string, maxLength: number) => {
+    if (str.length <= maxLength) {
+      return str
+    }
+
+    return str.substring(0, maxLength) + '...'
+  }
+
+  if (!(node instanceof HTMLElement)) {
+    const text = node.textContent || '<empty string>'
+    return <>{truncate(text, 50)}</>
+  }
 
   return (
     <div>
       {'<'}
-      <b>{element.tagName.toLocaleLowerCase()}</b>
-      {Array.from(element.attributes).map((attribute, idx) => {
+      <b>{node.tagName.toLocaleLowerCase()}</b>
+      {Array.from(node.attributes).map((attribute, idx) => {
         return (
           <span key={attribute.name + idx}>
             {' '}

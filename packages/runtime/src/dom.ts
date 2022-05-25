@@ -6,8 +6,18 @@ export function elemenentToString(element: HTMLElement) {
     .join(' ')}>`
 }
 
-export function elementGetAbsolutePosition(element: HTMLElement) {
-  const rect = element.getBoundingClientRect()
+export function elementGetAbsolutePosition(node: Node) {
+  const rect =
+    node instanceof HTMLElement
+      ? node.getBoundingClientRect()
+      : (() => {
+          const range = document.createRange()
+          range.selectNode(node)
+          const rect = range.getBoundingClientRect()
+          range.detach()
+          return rect
+        })()
+
   return {
     top: rect.top + window.scrollY,
     left: rect.left + window.scrollX,
@@ -16,7 +26,7 @@ export function elementGetAbsolutePosition(element: HTMLElement) {
   }
 }
 
-export function observeElement(element: HTMLElement, callback: MutationCallback) {
+export function observeNode(element: Node, callback: MutationCallback) {
   const observer = new MutationObserver(callback)
   observer.observe(element, {
     attributes: true,
@@ -32,5 +42,5 @@ export function observeElement(element: HTMLElement, callback: MutationCallback)
     })
   }
 
-  return {observer, parentObserver}
+  return { observer, parentObserver }
 }

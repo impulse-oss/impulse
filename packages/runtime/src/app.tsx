@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
-import { fsGetSourceForElement, fsWriteToFile, useDirHandle } from './fs'
+import { fsGetSourceForNode, fsWriteToFile, useDirHandle } from './fs'
 import {
   KBarProvider,
   KBarPortal,
@@ -15,13 +15,16 @@ import {
   VisualState,
   useKBar,
 } from 'kbar'
-import { elementGetAbsolutePosition, observeElement } from './dom'
+import { elementGetAbsolutePosition, observeNode } from './dom'
 import { ElementNavbar } from './navbar'
 import { isSourceJsxElement, transformCode } from './ast'
-import { getReactFiber, FiberSource } from './react-source'
+import { getReactFiberWithSource, FiberSource } from './react-source'
 
 declare global {
-  interface HTMLElement {
+  interface Window {
+    $swip?: Node
+  }
+  interface Node {
     swipHide?: boolean
   }
 }
@@ -54,7 +57,7 @@ function SwipApp() {
   const [selectionState, setSelectionState] = useState<
     | {
         type: 'elementSelected'
-        selectedElement: HTMLElement
+        selectedNode: Node
         parentElement: HTMLElement
         indexInsideParent: number
       }
@@ -64,7 +67,7 @@ function SwipApp() {
   >({ type: 'elementNotSelected' })
 
   const setSelectedElement = (
-    selectedElement: HTMLElement,
+    selectedElement: Node,
     parameters?: { indexInsideParent?: number },
   ) => {
     const parentElement = selectedElement.parentElement
@@ -72,16 +75,18 @@ function SwipApp() {
       return setSelectionState({ type: 'elementNotSelected' })
     }
 
-    const siblings = Array.from(parentElement.children)
+    const siblings = Array.from(parentElement.childNodes) as Node[]
     const indexInsideParent =
       parameters?.indexInsideParent ?? siblings.indexOf(selectedElement)
 
     setSelectionState({
       type: 'elementSelected',
-      selectedElement,
+      selectedNode: selectedElement,
       parentElement: parentElement,
       indexInsideParent,
     })
+
+    window.$swip = selectedElement
   }
 
   const removeElementSelection = () => {
@@ -165,21 +170,10 @@ function SwipApp() {
       return
     }
 
-    const { observer, parentObserver } = observeElement(
-      selectionState.selectedElement,
-      (mutations) => {
-        console.log('mutations', mutations)
-        if (
-          mutations.find((mutation) => {
-            return Array.from(mutation.removedNodes).find((node) => {
-              return node === selectionState.selectedElement
-            })
-          })
-        ) {
-          console.log('selected node is removed!!', { mutations })
-        }
+    const { observer, parentObserver } = observeNode(
+      selectionState.selectedNode,
+      () => {
         onSelectedElementRemoved()
-
         rerender()
       },
     )
@@ -199,8 +193,8 @@ function SwipApp() {
 
   const { getDirHandle } = useDirHandle()
 
-  const jumpToCode = (selectedElement: HTMLElement) => {
-    const fiber = getReactFiber(selectedElement)
+  const jumpToCode = (selectedElement: Node) => {
+    const fiber = getReactFiberWithSource(selectedElement)
     if (!fiber) {
       return
     }
@@ -218,10 +212,7 @@ function SwipApp() {
     selectedElement: HTMLElement,
     classNameToRemove: string,
   ) => {
-    const sourceFile = await fsGetSourceForElement(
-      selectedElement,
-      getDirHandle,
-    )
+    const sourceFile = await fsGetSourceForNode(selectedElement, getDirHandle)
     if (!sourceFile) {
       return
     }
@@ -284,10 +275,7 @@ function SwipApp() {
     selectedElement: HTMLElement,
     classNameToAdd: string,
   ) => {
-    const sourceFile = await fsGetSourceForElement(
-      selectedElement,
-      getDirHandle,
-    )
+    const sourceFile = await fsGetSourceForNode(selectedElement, getDirHandle)
     if (!sourceFile) {
       return
     }
@@ -340,10 +328,7 @@ function SwipApp() {
   }
 
   const removeElement = async (selectedElement: HTMLElement) => {
-    const sourceFile = await fsGetSourceForElement(
-      selectedElement,
-      getDirHandle,
-    )
+    const sourceFile = await fsGetSourceForNode(selectedElement, getDirHandle)
     if (!sourceFile) {
       return
     }
@@ -368,7 +353,7 @@ function SwipApp() {
     await fsWriteToFile(sourceFile.fileHandle, code)
 
     await new Promise<void>((resolve) => {
-      const observers = observeElement(selectedElement, () => {
+      const observers = observeNode(selectedElement, () => {
         observers.observer.disconnect()
         observers.parentObserver?.disconnect()
         resolve()
@@ -393,19 +378,21 @@ function SwipApp() {
               keywords: 'jump code',
               section: 'General',
               perform: () =>
-                selectionState.selectedElement &&
-                jumpToCode(selectionState.selectedElement),
+                selectionState.selectedNode &&
+                jumpToCode(selectionState.selectedNode),
             },
 
-            {
+            ...(selectionState.selectedNode instanceof HTMLElement ? [{
               id: 'add-class',
               name: 'Add class',
               shortcut: ['a'],
               keywords: 'add class',
               section: 'General',
-            },
+            }] : []),
 
-            ...(currentRootActionId === 'add-class' && searchQuery !== ''
+            ...(currentRootActionId === 'add-class' &&
+            searchQuery !== '' &&
+            selectionState.selectedNode instanceof HTMLElement
               ? [
                   {
                     id: `add-class-custom-${searchQuery}`,
@@ -415,13 +402,17 @@ function SwipApp() {
                     parent: 'add-class',
                     perform: () => {
                       selectionState.type === 'elementSelected' &&
-                        addClass(selectionState.selectedElement, searchQuery)
+                        addClass(
+                          selectionState.selectedNode as HTMLElement,
+                          searchQuery,
+                        )
                     },
                   },
                 ]
               : []),
 
-            ...(selectionState.selectedElement.classList.length > 0
+            ...(selectionState.selectedNode instanceof HTMLElement &&
+            selectionState.selectedNode.classList.length > 0
               ? [
                   {
                     id: 'remove-class',
@@ -431,7 +422,7 @@ function SwipApp() {
                     section: 'General',
                   },
 
-                  ...Array.from(selectionState.selectedElement.classList).map(
+                  ...Array.from(selectionState.selectedNode.classList).map(
                     (className) => ({
                       id: `remove-class-${className}`,
                       name: `${className}`,
@@ -440,21 +431,21 @@ function SwipApp() {
                       parent: 'remove-class',
                       perform: () =>
                         selectionState.type === 'elementSelected' &&
-                        removeClass(selectionState.selectedElement, className),
+                        removeClass(selectionState.selectedNode as HTMLElement, className),
                     }),
                   ),
                 ]
               : []),
 
-            {
+            ...(selectionState.selectedNode instanceof HTMLElement ? [{
               section: 'General',
               id: 'remove-element',
               name: 'Remove element',
               shortcut: [],
               perform: () =>
                 selectionState.type === 'elementSelected' &&
-                removeElement(selectionState.selectedElement),
-            },
+                removeElement(selectionState.selectedNode as HTMLElement),
+            }] : []),
           ]
         : []),
     ],
@@ -464,8 +455,14 @@ function SwipApp() {
   // click
   useEffect(() => {
     const elementOnClick = (event: MouseEvent) => {
-      const elementUnderCursor = event.target as HTMLElement
-      if (elementUnderCursor.closest('#swip-root')) {
+      const elementUnderCursor = event.target as Node
+      const parentElement = elementUnderCursor.parentElement
+
+      if (!parentElement) {
+        return
+      }
+
+      if (parentElement.id === 'swip-root' || parentElement.closest('#swip-root')) {
         return
       }
 
@@ -510,31 +507,31 @@ function SwipApp() {
           setSelectedElement(parent)
         },
         ArrowUp: () => {
-          const previousElement =
-            selectionState.selectedElement.previousElementSibling
+          const previousNode =
+            selectionState.selectedNode.previousSibling
 
-          if (!previousElement) {
+          if (!previousNode) {
             return
           }
 
-          setSelectedElement(previousElement as HTMLElement)
+          setSelectedElement(previousNode)
         },
         ArrowDown: () => {
-          const nextElement = selectionState.selectedElement.nextElementSibling
+          const nextNode = selectionState.selectedNode.nextSibling
 
-          if (!nextElement) {
+          if (!nextNode) {
             return
           }
 
-          setSelectedElement(nextElement as HTMLElement)
+          setSelectedElement(nextNode)
         },
         ArrowRight: () => {
-          const firstChild = selectionState.selectedElement.firstElementChild
+          const firstChild = selectionState.selectedNode.firstChild
 
           if (!firstChild) {
             return
           }
-          setSelectedElement(firstChild as HTMLElement)
+          setSelectedElement(firstChild)
         },
         Escape: () => {
           if (selectionState.type === 'elementSelected') {
@@ -590,38 +587,32 @@ function SwipApp() {
     <div>
       {selectionState.type === 'elementSelected' && (
         <>
-          <SelectionBox selectedElement={selectionState.selectedElement} />
-          {selectionState.selectedElement.parentElement && (
+          <SelectionBox selectedElement={selectionState.selectedNode} />
+          {selectionState.selectedNode.parentElement && (
             <>
               <SelectionBoxParent
-                selectedElement={selectionState.selectedElement.parentElement}
+                selectedElement={selectionState.selectedNode.parentElement}
               />
-              {Array.from(selectionState.selectedElement.parentElement.children)
+              {Array.from(selectionState.selectedNode.parentElement.children)
                 .filter((element) => {
-                  return element !== selectionState.selectedElement
+                  return element !== selectionState.selectedNode
                 })
                 .map((element, idx) => {
                   return (
-                    <SelectionBoxSibling
-                      key={idx}
-                      selectedElement={element as HTMLElement}
-                    />
+                    <SelectionBoxSibling key={idx} selectedElement={element} />
                   )
                 })}
             </>
           )}
-          {Array.from(selectionState.selectedElement.children).map(
+          {Array.from(selectionState.selectedNode.childNodes).map(
             (child, idx) => (
-              <SelectionBoxChild
-                key={idx}
-                selectedElement={child as HTMLElement}
-              />
+              <SelectionBoxChild key={idx} selectedNode={child} />
             ),
           )}
           <ElementNavbar
             ref={navbarRef}
-            selectedElement={selectionState.selectedElement}
-            onElementClick={setSelectedElement}
+            selectedNode={selectionState.selectedNode}
+            onNodeClick={setSelectedElement}
           />
         </>
       )}
@@ -672,7 +663,7 @@ function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource) {
   return `vscode://file${fileName}:${lineNumber}:${columnNumber}`
 }
 
-function SelectionBox(props: { selectedElement: HTMLElement }) {
+function SelectionBox(props: { selectedElement: Node }) {
   const { selectedElement } = props
   const absolutePosition = elementGetAbsolutePosition(selectedElement)
 
@@ -687,7 +678,7 @@ function SelectionBox(props: { selectedElement: HTMLElement }) {
   )
 }
 
-function SelectionBoxParent(props: { selectedElement: HTMLElement }) {
+function SelectionBoxParent(props: { selectedElement: Node }) {
   const { selectedElement } = props
   const absolutePosition = elementGetAbsolutePosition(selectedElement)
 
@@ -701,7 +692,7 @@ function SelectionBoxParent(props: { selectedElement: HTMLElement }) {
   )
 }
 
-function SelectionBoxSibling(props: { selectedElement: HTMLElement }) {
+function SelectionBoxSibling(props: { selectedElement: Node }) {
   const { selectedElement } = props
   const absolutePosition = elementGetAbsolutePosition(selectedElement)
 
@@ -716,8 +707,8 @@ function SelectionBoxSibling(props: { selectedElement: HTMLElement }) {
   )
 }
 
-function SelectionBoxChild(props: { selectedElement: HTMLElement }) {
-  const { selectedElement } = props
+function SelectionBoxChild(props: { selectedNode: Node }) {
+  const { selectedNode: selectedElement } = props
   const absolutePosition = elementGetAbsolutePosition(selectedElement)
 
   const adjustedPosition = {
