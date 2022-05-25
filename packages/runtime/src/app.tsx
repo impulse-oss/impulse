@@ -330,6 +330,7 @@ function ImpulseApp() {
   const removeElement = async (selectedElement: HTMLElement) => {
     const sourceFile = await fsGetSourceForNode(selectedElement, getDirHandle)
     if (!sourceFile) {
+      alert('There is no file associated with this element')
       return
     }
 
@@ -382,13 +383,17 @@ function ImpulseApp() {
                 jumpToCode(selectionState.selectedNode),
             },
 
-            ...(selectionState.selectedNode instanceof HTMLElement ? [{
-              id: 'add-class',
-              name: 'Add class',
-              shortcut: ['a'],
-              keywords: 'add class',
-              section: 'General',
-            }] : []),
+            ...(selectionState.selectedNode instanceof HTMLElement
+              ? [
+                  {
+                    id: 'add-class',
+                    name: 'Add class',
+                    shortcut: ['a'],
+                    keywords: 'add class',
+                    section: 'General',
+                  },
+                ]
+              : []),
 
             ...(currentRootActionId === 'add-class' &&
             searchQuery !== '' &&
@@ -431,21 +436,28 @@ function ImpulseApp() {
                       parent: 'remove-class',
                       perform: () =>
                         selectionState.type === 'elementSelected' &&
-                        removeClass(selectionState.selectedNode as HTMLElement, className),
+                        removeClass(
+                          selectionState.selectedNode as HTMLElement,
+                          className,
+                        ),
                     }),
                   ),
                 ]
               : []),
 
-            ...(selectionState.selectedNode instanceof HTMLElement ? [{
-              section: 'General',
-              id: 'remove-element',
-              name: 'Remove element',
-              shortcut: [],
-              perform: () =>
-                selectionState.type === 'elementSelected' &&
-                removeElement(selectionState.selectedNode as HTMLElement),
-            }] : []),
+            ...(selectionState.selectedNode instanceof HTMLElement
+              ? [
+                  {
+                    section: 'General',
+                    id: 'remove-element',
+                    name: 'Remove element',
+                    shortcut: [],
+                    perform: () =>
+                      selectionState.type === 'elementSelected' &&
+                      removeElement(selectionState.selectedNode as HTMLElement),
+                  },
+                ]
+              : []),
           ]
         : []),
     ],
@@ -462,7 +474,10 @@ function ImpulseApp() {
         return
       }
 
-      if (parentElement.id === 'impulse-root' || parentElement.closest('#impulse-root')) {
+      if (
+        parentElement.id === 'impulse-root' ||
+        parentElement.closest('#impulse-root')
+      ) {
         return
       }
 
@@ -507,8 +522,7 @@ function ImpulseApp() {
           setSelectedElement(parent)
         },
         ArrowUp: () => {
-          const previousNode =
-            selectionState.selectedNode.previousSibling
+          const previousNode = selectionState.selectedNode.previousSibling
 
           if (!previousNode) {
             return
