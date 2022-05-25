@@ -24,6 +24,7 @@ export function SwipRoot() {
   return (
     <div
       id="swip-root"
+      className="swip-styles"
       style={{
         position: 'absolute',
         top: 0,
@@ -238,7 +239,7 @@ function SwipApp() {
             {
               id: 'add-class',
               name: 'Add class',
-              shortcut: [],
+              shortcut: ['a'],
               keywords: 'add class',
               section: 'General',
             },
@@ -488,9 +489,9 @@ function SwipApp() {
         </>
       )}
       <KBarPortal>
-        <KBarPositioner>
-          <KBarAnimator>
-            <KBarSearch />
+        <KBarPositioner className="swip-styles">
+          <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-black">
+            <KBarSearch className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0" />
             <RenderResults />
           </KBarAnimator>
         </KBarPositioner>
@@ -508,14 +509,21 @@ function RenderResults() {
       items={results}
       onRender={({ item, active }) =>
         typeof item === 'string' ? (
-          <div className="bg-white">{item}</div>
+          <div className="bg-white uppercase text-xs px-4 py-2">{item}</div>
         ) : (
           <div
-            style={{
-              background: active ? '#eee' : '#fff',
-            }}
+            className={`flex justify-between text-slate-900 px-4 py-2 ${
+              active ? 'bg-[#eee]' : ''
+            }`}
           >
-            {item.name}
+            <div>{item.name}</div>
+            {item.shortcut?.length ? (
+              <div className="uppercase font-mono bg-[#d9d9d9] py-1 px-2 rounded-md text-xs">
+                {item.shortcut}
+              </div>
+            ) : (
+              <div></div>
+            )}
           </div>
         )
       }

@@ -1,4 +1,4 @@
-#swip-root {
+.swip-styles {
   @tailwind base;
   @tailwind components;
   @tailwind utilities;
