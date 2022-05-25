@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import logo from './logo.svg'
 import './App.css'
-import { SwipRoot } from '../../src/app'
+import { ImpulseRoot } from '../../src/app'
 import '../../dist/index.css'
 
 function App() {
@@ -9,7 +9,7 @@ function App() {
 
   return (
     <div className="App">
-      <SwipRoot />
+      <ImpulseRoot />
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
         <p>Hello Vite + React!</p>

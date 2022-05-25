@@ -16,11 +16,11 @@ export const ElementNavbar = forwardRef(
     }
 
     const siblings = Array.from(parentElement.childNodes).filter(
-      (element) => !element.swipHide,
+      (element) => !element.__impulseHide,
     )
 
     const children = Array.from(selectedElement.childNodes).filter(
-      (element) => !element.swipHide,
+      (element) => !element.__impulseHide,
     )
 
     return (
@@ -126,8 +126,4 @@ function ElementDetails(props: { node: Node }) {
       {'>'}
     </div>
   )
-}
-
-function excludeSwipRoot(element: HTMLElement) {
-  return element.id !== 'swip-root'
 }

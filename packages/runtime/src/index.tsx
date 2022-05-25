@@ -1,6 +1,6 @@
 import ReactDOM from 'react-dom/client'
 import './styles.css'
-import { SwipRoot } from './app'
+import { ImpulseRoot } from './app'
 
 export function mountApp() {
   if (typeof window === 'undefined') {
@@ -8,9 +8,9 @@ export function mountApp() {
   }
 
   const rootElement = document.createElement('div')
-  rootElement.id = 'swip-mount-point'
+  rootElement.id = 'impulse-mount-point'
   document.body.appendChild(rootElement)
 
   const root = ReactDOM.createRoot(rootElement)
-  root.render(<SwipRoot />)
+  root.render(<ImpulseRoot />)
 }

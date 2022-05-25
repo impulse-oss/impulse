@@ -22,18 +22,18 @@ import { getReactFiberWithSource, FiberSource } from './react-source'
 
 declare global {
   interface Window {
-    $swip?: Node
+    $i?: Node
   }
   interface Node {
-    swipHide?: boolean
+    __impulseHide?: boolean
   }
 }
 
-export function SwipRoot() {
+export function ImpulseRoot() {
   return (
     <div
-      id="swip-root"
-      className="swip-styles"
+      id="impulse-root"
+      className="impulse-styles"
       style={{
         position: 'absolute',
         top: 0,
@@ -41,19 +41,19 @@ export function SwipRoot() {
       }}
     >
       <KBarProvider options={{ disableScrollbarManagement: true }}>
-        <SwipApp />
+        <ImpulseApp />
       </KBarProvider>
     </div>
   )
 }
 
-const SwipAppContext = createContext<{
+const ImpulseAppContext = createContext<{
   selectedElement: HTMLElement | null
   __rerenderValue: number
   rerender: () => void
 }>({ __rerenderValue: 0, selectedElement: null, rerender: () => {} })
 
-function SwipApp() {
+function ImpulseApp() {
   const [selectionState, setSelectionState] = useState<
     | {
         type: 'elementSelected'
@@ -86,7 +86,7 @@ function SwipApp() {
       indexInsideParent,
     })
 
-    window.$swip = selectedElement
+    window.$i = selectedElement
   }
 
   const removeElementSelection = () => {
@@ -111,7 +111,7 @@ function SwipApp() {
       | HTMLElement
       | undefined
 
-    if (siblingSameSpot && !siblingSameSpot.swipHide) {
+    if (siblingSameSpot && !siblingSameSpot.__impulseHide) {
       setSelectedElement(siblingSameSpot)
       return
     }
@@ -347,7 +347,7 @@ function SwipApp() {
 
     const oldDisplay = selectedElement.style.display
 
-    selectedElement.swipHide = true
+    selectedElement.__impulseHide = true
     selectedElement.style.display = 'none'
     onSelectedElementRemoved()
     await fsWriteToFile(sourceFile.fileHandle, code)
@@ -364,7 +364,7 @@ function SwipApp() {
     if (selectedElement.getAttribute('style') === '') {
       selectedElement.removeAttribute('style')
     }
-    selectedElement.swipHide = false
+    selectedElement.__impulseHide = false
   }
 
   useRegisterActions(
@@ -462,7 +462,7 @@ function SwipApp() {
         return
       }
 
-      if (parentElement.id === 'swip-root' || parentElement.closest('#swip-root')) {
+      if (parentElement.id === 'impulse-root' || parentElement.closest('#impulse-root')) {
         return
       }
 
@@ -577,7 +577,7 @@ function SwipApp() {
   }, [selectionState])
 
   return (
-    // <SwipAppContext.Provider
+    // <ImpulseAppContext.Provider
     //   value={{
     //     selectedElement,
     //     __rerenderValue,
@@ -617,7 +617,7 @@ function SwipApp() {
         </>
       )}
       <KBarPortal>
-        <KBarPositioner className="swip-styles" style={{ zIndex: 150 }}>
+        <KBarPositioner className="impulse-styles" style={{ zIndex: 150 }}>
           <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
             <KBarSearch className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0" />
             <RenderResults />
@@ -625,7 +625,7 @@ function SwipApp() {
         </KBarPositioner>
       </KBarPortal>
     </div>
-    // </SwipAppContext.Provider>
+    // </ImpulseAppContext.Provider>
   )
 }
 
