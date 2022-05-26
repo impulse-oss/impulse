@@ -1,24 +1,26 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
-import { fsGetSourceForNode, fsWriteToFile, useDirHandle } from './fs'
 import {
-  KBarProvider,
+  KBarAnimator,
+  KBarContext,
   KBarPortal,
   KBarPositioner,
-  KBarAnimator,
-  KBarSearch,
-  useMatches,
+  KBarProvider,
   KBarResults,
-  useRegisterActions,
-  KBarContext,
-  VisualState,
+  KBarSearch,
   useKBar,
+  useMatches,
+  useRegisterActions,
+  VisualState,
 } from 'kbar'
-import { elementGetAbsolutePosition, observeNode } from './dom'
-import { ElementNavbar } from './navbar'
+import prettier from 'prettier'
+import parserBabel from 'prettier/parser-babel'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { isSourceJsxElement, transformCode } from './ast'
-import { getReactFiberWithSource, FiberSource } from './react-source'
+import { elementGetAbsolutePosition, observeNode } from './dom'
+import { fsGetSourceForNode, fsWriteToFile, useDirHandle } from './fs'
+import { ElementNavbar } from './navbar'
+import { FiberSource, getReactFiberWithSource } from './react-source'
 
 declare global {
   interface Window {
@@ -344,14 +346,18 @@ function ImpulseApp() {
       },
     }
 
-    const code = transformCode(sourceFile.text, visitor).code!
+    const unformattedCode = transformCode(sourceFile.text, visitor).code!
+    const formattedCode = prettier.format(unformattedCode, {
+      parser: 'babel-ts',
+      plugins: [parserBabel],
+    })
 
     const oldDisplay = selectedElement.style.display
 
     selectedElement.__impulseHide = true
     selectedElement.style.display = 'none'
     onSelectedElementRemoved()
-    await fsWriteToFile(sourceFile.fileHandle, code)
+    await fsWriteToFile(sourceFile.fileHandle, formattedCode)
 
     await new Promise<void>((resolve) => {
       const observers = observeNode(selectedElement, () => {
@@ -383,28 +389,17 @@ function ImpulseApp() {
                 jumpToCode(selectionState.selectedNode),
             },
 
-            ...(selectionState.selectedNode instanceof HTMLElement
-              ? [
-                  {
-                    id: 'add-class',
-                    name: 'Add class',
-                    shortcut: ['a'],
-                    keywords: 'add class',
-                    section: 'General',
-                  },
-                ]
-              : []),
-
-            ...(currentRootActionId === 'add-class' &&
-            searchQuery !== '' &&
+            ...(searchQuery !== '' &&
             selectionState.selectedNode instanceof HTMLElement
               ? [
                   {
-                    id: `add-class-custom-${searchQuery}`,
-                    name: `> ${searchQuery}`,
+                    id: `add-class-custom-search`,
+                    name: searchQuery ? `> ${searchQuery}` : '>',
                     shortcut: [],
-                    section: 'Add class',
-                    parent: 'add-class',
+                    section: {
+                      name: 'Add class',
+                      priority: -10,
+                    },
                     perform: () => {
                       selectionState.type === 'elementSelected' &&
                         addClass(
@@ -416,15 +411,16 @@ function ImpulseApp() {
                 ]
               : []),
 
-            ...(selectionState.selectedNode instanceof HTMLElement &&
-            selectionState.selectedNode.classList.length > 0
+            ...(selectionState.selectedNode instanceof HTMLElement
               ? [
                   {
-                    id: 'remove-class',
-                    name: 'Remove class',
-                    shortcut: [],
-                    keywords: 'remove class',
                     section: 'General',
+                    id: 'remove-element',
+                    name: 'Remove element',
+                    shortcut: ['d', 'd'],
+                    perform: () =>
+                      selectionState.type === 'elementSelected' &&
+                      removeElement(selectionState.selectedNode as HTMLElement),
                   },
 
                   ...Array.from(selectionState.selectedNode.classList).map(
@@ -433,7 +429,6 @@ function ImpulseApp() {
                       name: `${className}`,
                       shortcut: [],
                       section: 'Remove class',
-                      parent: 'remove-class',
                       perform: () =>
                         selectionState.type === 'elementSelected' &&
                         removeClass(
