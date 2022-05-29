@@ -1,19 +1,19 @@
 import { get, set } from 'idb-keyval'
 import { useRef } from 'react'
-import { getReactFiberWithSource } from './react-source'
+import { getReactFiber } from './react-source'
 
 export async function fsGetSourceForNode(
   element: Node,
-  requestDirHandle: () => Promise<FileSystemDirectoryHandle | null>,
+  requestDirHandle: (params: {mode: FileSystemPermissionMode}) => Promise<FileSystemDirectoryHandle | null>,
 ) {
-  const fiber = getReactFiberWithSource(element)
+  const fiber = getReactFiber(element)
   if (!fiber) {
     return null
   }
 
   const source = fiber._debugSource
 
-  const dirHandle = await requestDirHandle()
+  const dirHandle = await requestDirHandle({ mode: 'readwrite' })
   if (!dirHandle) {
     return null
   }
@@ -29,10 +29,15 @@ export async function fsGetSourceForNode(
   }
 }
 
+export type OpenFile = {
+  text: string
+  fileHandle: FileSystemFileHandle
+}
+
 export async function fsGetFileContents(
   dirHandle: FileSystemDirectoryHandle,
   path: string,
-) {
+): Promise<OpenFile | undefined> {
   const rootPath = await detectRootPath(dirHandle, path)
 
   if (!rootPath) {
@@ -136,7 +141,9 @@ export function fileToText(file: File): Promise<string> {
 export function useDirHandle() {
   const dirHandlerRef = useRef<FileSystemDirectoryHandle | null>(null)
 
-  const getDirHandle = async () => {
+  const getDirHandle = async (params: {
+    mode: FileSystemPermissionMode
+  }) => {
     const dirHandler = await (async () => {
       const handlerFromRef = dirHandlerRef.current
 
@@ -160,9 +167,9 @@ export function useDirHandle() {
     })()
 
     if (
-      (await dirHandler.queryPermission({ mode: 'readwrite' })) !== 'granted'
+      (await dirHandler.queryPermission({ mode: params.mode })) !== 'granted'
     ) {
-      await dirHandler.requestPermission({ mode: 'readwrite' })
+      await dirHandler.requestPermission({ mode: params.mode })
       await set('dirHandler', dirHandler)
     }
 

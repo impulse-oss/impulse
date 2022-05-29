@@ -1,6 +1,7 @@
-import { TraverseOptions } from '@babel/traverse'
+import { NodePath, TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
 import {
+  Action,
   KBarAnimator,
   KBarContext,
   KBarPortal,
@@ -13,14 +14,23 @@ import {
   useRegisterActions,
   VisualState,
 } from 'kbar'
-import prettier from 'prettier'
-import parserBabel from 'prettier/parser-babel'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { isSourceJsxElement, transformCode } from './ast'
-import { elementGetAbsolutePosition, observeNode } from './dom'
+import {
+  findNodeAmongJsxChildren,
+  isSourceJsxElement,
+  JSXNode,
+  transformCode,
+  transformNodeInCode,
+  writeTransformationResult,
+} from './ast'
+import {
+  elementGetAbsolutePosition,
+  observeNode,
+  waitForAnyNodeMutation,
+} from './dom'
 import { fsGetSourceForNode, fsWriteToFile, useDirHandle } from './fs'
 import { ElementNavbar } from './navbar'
-import { FiberSource, getReactFiberWithSource } from './react-source'
+import { FiberSource, getReactFiber } from './react-source'
 
 declare global {
   interface Window {
@@ -101,7 +111,7 @@ function ImpulseApp() {
     }
 
     const { parentElement, indexInsideParent } = selectionState
-    const children = [...parentElement.children]
+    const children = [...parentElement.childNodes]
 
     const siblingSameSpot = children[indexInsideParent] as
       | HTMLElement
@@ -195,19 +205,52 @@ function ImpulseApp() {
 
   const { getDirHandle } = useDirHandle()
 
-  const jumpToCode = (selectedElement: Node) => {
-    const fiber = getReactFiberWithSource(selectedElement)
-    if (!fiber) {
+  const jumpToCode = async (selectedElement: Node) => {
+    const source = getReactFiber(selectedElement)?._debugSource
+    const parentSource = selectedElement.parentElement
+      ? getReactFiber(selectedElement.parentElement)?._debugSource
+      : undefined
+
+    if (selectedElement instanceof HTMLElement) {
+      if (!source) {
+        return
+      }
+
+      const vscodeLink = makeVscodeLink(source)
+      window.open(vscodeLink)
       return
     }
 
-    const source = fiber._debugSource
-    if (!source) {
+    if (!parentSource) {
       return
     }
 
-    const vscodeLink = makeVscodeLink(source)
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      (path) => {
+        return path.node
+      },
+      await getDirHandle({ mode: 'read' }),
+    )
+
+    if (transformResult.type === 'error') {
+      return
+    }
+
+    const targetJsxText = transformResult.visitorResult
+
+    if (!targetJsxText?.loc) {
+      return
+    }
+
+    const vscodeLink = makeVscodeLink({
+      ...parentSource,
+      lineNumber: targetJsxText.loc.end.line,
+      columnNumber: targetJsxText.loc.end.column + 1,
+    })
     window.open(vscodeLink)
+
+    return
   }
 
   const removeClass = async (
@@ -329,43 +372,33 @@ function ImpulseApp() {
     await fsWriteToFile(sourceFile.fileHandle, code)
   }
 
-  const removeElement = async (selectedElement: HTMLElement) => {
-    const sourceFile = await fsGetSourceForNode(selectedElement, getDirHandle)
-    if (!sourceFile) {
-      alert('There is no file associated with this element')
+  const removeElement = async (selectedElement: Node) => {
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      (path) => {
+        path.remove()
+      },
+      await getDirHandle({ mode: 'readwrite' }),
+    )
+
+    if (transformResult.type === 'error') {
       return
     }
 
-    const visitor: TraverseOptions = {
-      JSXElement(path) {
-        if (!isSourceJsxElement(path.node, sourceFile.fiberSource)) {
-          return
-        }
-
-        path.remove()
-      },
+    if (!(selectedElement instanceof HTMLElement)) {
+      await writeTransformationResult(transformResult)
+      return
     }
-
-    const unformattedCode = transformCode(sourceFile.text, visitor).code!
-    const formattedCode = prettier.format(unformattedCode, {
-      parser: 'babel-ts',
-      plugins: [parserBabel],
-    })
 
     const oldDisplay = selectedElement.style.display
 
     selectedElement.__impulseHide = true
     selectedElement.style.display = 'none'
     onSelectedElementRemoved()
-    await fsWriteToFile(sourceFile.fileHandle, formattedCode)
 
-    await new Promise<void>((resolve) => {
-      const observers = observeNode(selectedElement, () => {
-        observers.observer.disconnect()
-        observers.parentObserver?.disconnect()
-        resolve()
-      })
-    })
+    await writeTransformationResult(transformResult)
+
+    await waitForAnyNodeMutation(selectedElement)
 
     selectedElement.style.display = oldDisplay
     if (selectedElement.getAttribute('style') === '') {
@@ -374,55 +407,168 @@ function ImpulseApp() {
     selectedElement.__impulseHide = false
   }
 
+  const insertAfterNode = async (selectedElement: Node, jsxNode: JSXNode) => {
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      (path) => {
+        path.insertAfter(jsxNode)
+      },
+      await getDirHandle({ mode: 'readwrite' }),
+    )
+
+    if (transformResult.type === 'error') {
+      return
+    }
+
+    await writeTransformationResult(transformResult)
+
+    await waitForAnyNodeMutation(selectedElement)
+
+    if (selectedElement.nextSibling) {
+      setSelectedElement(selectedElement.nextSibling!)
+    }
+  }
+
+  const insertTextAfterNode = (selectedElement: Node, text: string) => {
+    return insertAfterNode(selectedElement, t.jsxText(text))
+  }
+
+  const insertChild = async (selectedElement: HTMLElement) => {
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      (path) => {
+        path.node.children.push(
+          t.jsxElement(
+            t.jsxOpeningElement(t.jsxIdentifier('div'), []),
+            t.jsxClosingElement(t.jsxIdentifier('div')),
+            [],
+          ),
+        )
+      },
+      await getDirHandle({ mode: 'readwrite' }),
+    )
+
+    if (transformResult.type === 'error') {
+      return
+    }
+
+    await writeTransformationResult(transformResult)
+
+    await waitForAnyNodeMutation(selectedElement)
+
+    setSelectedElement(selectedElement.lastChild!)
+  }
+
+  const sections = {
+    general: 'General',
+    addClass: {
+      name: 'Add class',
+      priority: -10,
+    },
+    insertText: {
+      name: 'Insert text',
+      priority: -20,
+    },
+  }
+
+  const actions: {
+    [key: string]: Omit<Action, 'id'> & {
+      showIf?: boolean
+    }
+  } = {
+    jumpToCode: {
+      showIf: selectionState.type === 'elementSelected',
+      name: 'Jump to code',
+      shortcut: ['c'],
+      keywords: 'jump code',
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        jumpToCode(selectionState.selectedNode),
+    },
+    removeElement: {
+      showIf: selectionState.type === 'elementSelected',
+      name: 'Remove element',
+      shortcut: ['d', 'd'],
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        removeElement(selectionState.selectedNode),
+    },
+    insertAfter: {
+      showIf: selectionState.type === 'elementSelected',
+      name: 'Insert after',
+      shortcut: [],
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertAfterNode(
+          selectionState.selectedNode,
+          t.jsxElement(
+            t.jsxOpeningElement(t.jsxIdentifier('div'), []),
+            t.jsxClosingElement(t.jsxIdentifier('div')),
+            [],
+          ),
+        ),
+    },
+    addClassFromSearch: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        searchQuery !== '' &&
+        searchQuery.split(' ').length === 1 &&
+        selectionState.selectedNode instanceof HTMLElement,
+      name: `> ${searchQuery}`,
+      shortcut: [],
+      section: {
+        name: 'Add class',
+        priority: -10,
+      },
+      perform: () => {
+        selectionState.type === 'elementSelected' &&
+          addClass(selectionState.selectedNode as HTMLElement, searchQuery)
+      },
+    },
+    insertTextFromSearch: {
+      showIf: selectionState.type === 'elementSelected' && searchQuery !== '',
+      section: sections.insertText,
+      name: `> ${searchQuery}`,
+      shortcut: [],
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertTextAfterNode(selectionState.selectedNode, searchQuery),
+    },
+    ...(selectionState.type === 'elementSelected' &&
+    selectionState.selectedNode instanceof HTMLElement
+      ? Object.fromEntries(
+          Array.from(selectionState.selectedNode.classList).map((className) => [
+            `removeClass-${className}`,
+            {
+              id: `remove-class-${className}`,
+              name: `${className}`,
+              shortcut: [],
+              section: 'Remove class',
+              perform: () =>
+                selectionState.type === 'elementSelected' &&
+                removeClass(
+                  selectionState.selectedNode as HTMLElement,
+                  className,
+                ),
+            },
+          ]),
+        )
+      : {}),
+  }
+
   useRegisterActions(
     [
+      ...Object.entries(actions).map(([key, action]) => ({
+        ...action,
+        id: key,
+      })),
       ...(selectionState.type === 'elementSelected'
         ? [
-            {
-              id: 'jump-to-code',
-              name: 'Jump to code',
-              shortcut: ['c'],
-              keywords: 'jump code',
-              section: 'General',
-              perform: () =>
-                selectionState.selectedNode &&
-                jumpToCode(selectionState.selectedNode),
-            },
-
-            ...(searchQuery !== '' &&
-            selectionState.selectedNode instanceof HTMLElement
-              ? [
-                  {
-                    id: `add-class-custom-search`,
-                    name: searchQuery ? `> ${searchQuery}` : '>',
-                    shortcut: [],
-                    section: {
-                      name: 'Add class',
-                      priority: -10,
-                    },
-                    perform: () => {
-                      selectionState.type === 'elementSelected' &&
-                        addClass(
-                          selectionState.selectedNode as HTMLElement,
-                          searchQuery,
-                        )
-                    },
-                  },
-                ]
-              : []),
-
             ...(selectionState.selectedNode instanceof HTMLElement
               ? [
-                  {
-                    section: 'General',
-                    id: 'remove-element',
-                    name: 'Remove element',
-                    shortcut: ['d', 'd'],
-                    perform: () =>
-                      selectionState.type === 'elementSelected' &&
-                      removeElement(selectionState.selectedNode as HTMLElement),
-                  },
-
                   ...Array.from(selectionState.selectedNode.classList).map(
                     (className) => ({
                       id: `remove-class-${className}`,
@@ -437,19 +583,15 @@ function ImpulseApp() {
                         ),
                     }),
                   ),
-                ]
-              : []),
 
-            ...(selectionState.selectedNode instanceof HTMLElement
-              ? [
                   {
                     section: 'General',
-                    id: 'remove-element',
-                    name: 'Remove element',
+                    id: 'insert-child',
+                    name: 'Insert child',
                     shortcut: [],
                     perform: () =>
                       selectionState.type === 'elementSelected' &&
-                      removeElement(selectionState.selectedNode as HTMLElement),
+                      insertChild(selectionState.selectedNode as HTMLElement),
                   },
                 ]
               : []),

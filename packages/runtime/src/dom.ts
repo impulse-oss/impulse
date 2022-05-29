@@ -44,3 +44,13 @@ export function observeNode(element: Node, callback: MutationCallback) {
 
   return { observer, parentObserver }
 }
+
+export function waitForAnyNodeMutation(element: Node) {
+  return new Promise<void>((resolve) => {
+    const observers = observeNode(element, () => {
+      observers.observer.disconnect()
+      observers.parentObserver?.disconnect()
+      resolve()
+    })
+  })
+}

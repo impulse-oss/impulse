@@ -10,7 +10,7 @@ export type Fiber = {
   _debugSource: FiberSource
 }
 
-export function getReactFiberWithSource(element: Node): Fiber | null {
+export function getReactFiber(element: Node) {
   const key = Object.keys(element).find((key) => {
     return key.startsWith('__reactFiber$')
   })
@@ -22,12 +22,6 @@ export function getReactFiberWithSource(element: Node): Fiber | null {
   const domFiber = element[key as keyof typeof element] as unknown as
     | Fiber
     | undefined
-  if (!domFiber?._debugSource) {
-    if (domFiber?.return?.stateNode) {
-      return getReactFiberWithSource(domFiber.return.stateNode)
-    }
-    return null
-  }
 
   return domFiber
 }
