@@ -1,8 +1,8 @@
 import { transform } from '@babel/standalone'
 import { NodePath, TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
-// import prettier from 'prettier'
-// import parserBabel from 'prettier/parser-babel'
+import prettier from 'prettier'
+import parserBabel from 'prettier/parser-babel'
 import { fsGetFileContents, fsWriteToFile, OpenFile } from './fs'
 import { FiberSource, getReactFiber } from './react-source'
 
@@ -24,12 +24,12 @@ export function transformCode(inputCode: string, visitor: TraverseOptions) {
 
   return {
     ...transformResult,
-    code: transformResult.code,
-    // ? prettier.format(transformResult.code, {
-    //     parser: 'babel',
-    //     plugins: [parserBabel],
-    //   })
-    // : transformResult.code,
+    code: transformResult.code
+      ? prettier.format(transformResult.code, {
+          parser: 'babel',
+          plugins: [parserBabel],
+        })
+      : transformResult.code,
   }
 }
 
@@ -44,7 +44,7 @@ export async function transformNodeInCode<T extends Node, R>(
   domNode: T,
   visitor: T extends HTMLElement
     ? (path: NodePath<t.JSXElement>) => R
-    : (path: NodePath<Exclude<JSXNode, t.JSXElement>>) => R,
+    : (path: NodePath<JSXNode>) => R,
   dirHandle: FileSystemDirectoryHandle,
 ): Promise<TransformResultSuccess<R> | { type: 'error' }> {
   const source = (() => {
@@ -144,7 +144,7 @@ export async function transformNodeInCode<T extends Node, R>(
   }
 }
 
-export function writeTransformationResult(
+export function writeTransformationResultToFile(
   transformResult: TransformResultSuccess<unknown>,
 ) {
   return fsWriteToFile(transformResult.file.fileHandle, transformResult.code)

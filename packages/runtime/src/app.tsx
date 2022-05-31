@@ -21,7 +21,7 @@ import {
   JSXNode,
   transformCode,
   transformNodeInCode,
-  writeTransformationResult,
+  writeTransformationResultToFile,
 } from './ast'
 import {
   elementGetAbsolutePosition,
@@ -372,7 +372,7 @@ function ImpulseApp() {
     await fsWriteToFile(sourceFile.fileHandle, code)
   }
 
-  const removeElement = async (selectedElement: Node) => {
+  const removeNode = async (selectedElement: Node) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       (path) => {
@@ -386,7 +386,7 @@ function ImpulseApp() {
     }
 
     if (!(selectedElement instanceof HTMLElement)) {
-      await writeTransformationResult(transformResult)
+      await writeTransformationResultToFile(transformResult)
       return
     }
 
@@ -396,7 +396,7 @@ function ImpulseApp() {
     selectedElement.style.display = 'none'
     onSelectedElementRemoved()
 
-    await writeTransformationResult(transformResult)
+    await writeTransformationResultToFile(transformResult)
 
     await waitForAnyNodeMutation(selectedElement)
 
@@ -407,11 +407,14 @@ function ImpulseApp() {
     selectedElement.__impulseHide = false
   }
 
-  const insertAfterNode = async (selectedElement: Node, jsxNode: JSXNode) => {
+  const insertBeforeNode = async (
+    selectedElement: Node,
+    jsxNodeToInsert: JSXNode,
+  ) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       (path) => {
-        path.insertAfter(jsxNode)
+        path.insertBefore(jsxNodeToInsert)
       },
       await getDirHandle({ mode: 'readwrite' }),
     )
@@ -420,7 +423,32 @@ function ImpulseApp() {
       return
     }
 
-    await writeTransformationResult(transformResult)
+    await writeTransformationResultToFile(transformResult)
+
+    await waitForAnyNodeMutation(selectedElement)
+
+    if (selectedElement.previousSibling) {
+      setSelectedElement(selectedElement.previousSibling!)
+    }
+  }
+
+  const insertAfterNode = async (
+    selectedElement: Node,
+    jsxNodeToInsert: JSXNode,
+  ) => {
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      (path) => {
+        path.insertAfter(jsxNodeToInsert)
+      },
+      await getDirHandle({ mode: 'readwrite' }),
+    )
+
+    if (transformResult.type === 'error') {
+      return
+    }
+
+    await writeTransformationResultToFile(transformResult)
 
     await waitForAnyNodeMutation(selectedElement)
 
@@ -429,21 +457,14 @@ function ImpulseApp() {
     }
   }
 
-  const insertTextAfterNode = (selectedElement: Node, text: string) => {
-    return insertAfterNode(selectedElement, t.jsxText(text))
-  }
-
-  const insertChild = async (selectedElement: HTMLElement) => {
+  const insertChild = async (
+    selectedElement: HTMLElement,
+    jsxNodeToInsert: JSXNode,
+  ) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       (path) => {
-        path.node.children.push(
-          t.jsxElement(
-            t.jsxOpeningElement(t.jsxIdentifier('div'), []),
-            t.jsxClosingElement(t.jsxIdentifier('div')),
-            [],
-          ),
-        )
+        path.node.children.push(jsxNodeToInsert)
       },
       await getDirHandle({ mode: 'readwrite' }),
     )
@@ -452,15 +473,105 @@ function ImpulseApp() {
       return
     }
 
-    await writeTransformationResult(transformResult)
+    await writeTransformationResultToFile(transformResult)
 
     await waitForAnyNodeMutation(selectedElement)
 
     setSelectedElement(selectedElement.lastChild!)
   }
 
+  const changeTag = async (
+    selectedElement: HTMLElement,
+    newTagName: typeof htmlTags[0],
+  ) => {
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      (path) => {
+        if (path.node.openingElement.name.type !== 'JSXIdentifier') {
+          return
+        }
+        path.node.openingElement.name.name = newTagName.toLowerCase()
+
+        if (path.node.closingElement?.name.type === 'JSXIdentifier') {
+          path.node.closingElement.name.name = newTagName.toLowerCase()
+        }
+      },
+      await getDirHandle({ mode: 'readwrite' }),
+    )
+
+    if (transformResult.type === 'error') {
+      return
+    }
+
+    await writeTransformationResultToFile(transformResult)
+
+    await waitForAnyNodeMutation(selectedElement)
+  }
+
+  const moveNode = async (selectedElement: Node, direction: 'up' | 'down') => {
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      (path) => {
+        const parent = path.parentPath.node
+        if (parent.type !== 'JSXElement') {
+          return
+        }
+
+        const children = parent.children.filter((childNode) => {
+          if (
+            childNode.type === 'JSXText' &&
+            childNode.value.trim().length === 0
+          ) {
+            return false
+          }
+          return true
+        })
+
+        const index = children.indexOf(path.node)
+        const siblingIndex = direction === 'up' ? index - 1 : index + 1
+        const sibling = children[siblingIndex]
+        if (!sibling) {
+          return
+        }
+
+        ;[children[index], children[siblingIndex]] = [
+          children[siblingIndex],
+          children[index],
+        ]
+        parent.children = children
+      },
+      await getDirHandle({ mode: 'readwrite' }),
+    )
+
+    if (transformResult.type === 'error') {
+      return
+    }
+
+    const parent = selectedElement.parentElement
+    if (!parent) {
+      return
+    }
+
+    if (selectionState.type !== 'elementSelected') {
+      return
+    }
+
+    const newChildIndex =
+      selectionState.indexInsideParent + (direction === 'up' ? -1 : 1)
+
+    // for some reason, Vite fast refresh doesn't fully recreate the dom on first save, some of the time
+    await writeTransformationResultToFile(transformResult)
+    await waitForAnyNodeMutation(selectedElement)
+
+    const sibling = parent.children[newChildIndex]
+    if (sibling) {
+      setSelectedElement(sibling)
+    }
+  }
+
   const sections = {
     general: 'General',
+    removeClass: 'Remove class',
     addClass: {
       name: 'Add class',
       priority: -10,
@@ -468,6 +579,10 @@ function ImpulseApp() {
     insertText: {
       name: 'Insert text',
       priority: -20,
+    },
+    changeTag: {
+      name: 'Change tag',
+      priority: -30,
     },
   }
 
@@ -493,17 +608,73 @@ function ImpulseApp() {
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
-        removeElement(selectionState.selectedNode),
+        removeNode(selectionState.selectedNode),
     },
-    insertAfter: {
+    moveUp: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        !!selectionState.selectedNode.previousSibling,
+      name: 'Move up',
+      shortcut: ['m', 'u'],
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        moveNode(selectionState.selectedNode, 'up'),
+    },
+    moveDown: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        !!selectionState.selectedNode.nextSibling,
+      name: 'Move down',
+      shortcut: ['m', 'd'],
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        moveNode(selectionState.selectedNode, 'down'),
+    },
+    insertDivBefore: {
       showIf: selectionState.type === 'elementSelected',
-      name: 'Insert after',
-      shortcut: [],
+      name: 'Insert before: <div>',
+      shortcut: ['i', 'b'],
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertBeforeNode(
+          selectionState.selectedNode,
+          t.jsxElement(
+            t.jsxOpeningElement(t.jsxIdentifier('div'), []),
+            t.jsxClosingElement(t.jsxIdentifier('div')),
+            [],
+          ),
+        ),
+    },
+    insertDivAfter: {
+      showIf: selectionState.type === 'elementSelected',
+      name: 'Insert after: <div>',
+      shortcut: ['i', 'a'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
         insertAfterNode(
           selectionState.selectedNode,
+          t.jsxElement(
+            t.jsxOpeningElement(t.jsxIdentifier('div'), []),
+            t.jsxClosingElement(t.jsxIdentifier('div')),
+            [],
+          ),
+        ),
+    },
+    insertDivChild: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        selectionState.selectedNode instanceof HTMLElement,
+      name: 'Insert child: <div>',
+      shortcut: ['i', 'i'],
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertChild(
+          selectionState.selectedNode as HTMLElement,
           t.jsxElement(
             t.jsxOpeningElement(t.jsxIdentifier('div'), []),
             t.jsxClosingElement(t.jsxIdentifier('div')),
@@ -528,25 +699,15 @@ function ImpulseApp() {
           addClass(selectionState.selectedNode as HTMLElement, searchQuery)
       },
     },
-    insertTextFromSearch: {
-      showIf: selectionState.type === 'elementSelected' && searchQuery !== '',
-      section: sections.insertText,
-      name: `> ${searchQuery}`,
-      shortcut: [],
-      perform: () =>
-        selectionState.type === 'elementSelected' &&
-        insertTextAfterNode(selectionState.selectedNode, searchQuery),
-    },
     ...(selectionState.type === 'elementSelected' &&
     selectionState.selectedNode instanceof HTMLElement
       ? Object.fromEntries(
           Array.from(selectionState.selectedNode.classList).map((className) => [
             `removeClass-${className}`,
             {
-              id: `remove-class-${className}`,
               name: `${className}`,
               shortcut: [],
-              section: 'Remove class',
+              section: sections.removeClass,
               perform: () =>
                 selectionState.type === 'elementSelected' &&
                 removeClass(
@@ -557,48 +718,82 @@ function ImpulseApp() {
           ]),
         )
       : {}),
+    ...(selectionState.type === 'elementSelected' &&
+    selectionState.selectedNode instanceof HTMLElement
+      ? Object.fromEntries(
+          htmlTags
+            .filter(
+              (tagName) =>
+                tagName !==
+                (
+                  selectionState.selectedNode as HTMLElement
+                ).tagName.toLowerCase(),
+            )
+            .map((tagName) => [
+              `changeTag-${tagName}`,
+              {
+                name: `<${tagName}>`,
+                shortcut: [],
+                section: sections.changeTag,
+                perform: () =>
+                  selectionState.type === 'elementSelected' &&
+                  changeTag(
+                    selectionState.selectedNode as HTMLElement,
+                    tagName,
+                  ),
+              },
+            ]),
+        )
+      : {}),
+    insertTextBefore: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        selectionState.selectedNode instanceof HTMLElement &&
+        searchQuery !== '',
+      section: sections.insertText,
+      name: `Insert before: ${searchQuery}`,
+      shortcut: [],
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertBeforeNode(selectionState.selectedNode, t.jsxText(searchQuery)),
+    },
+    insertTextAfter: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        selectionState.selectedNode instanceof HTMLElement &&
+        searchQuery !== '',
+      section: sections.insertText,
+      name: `Insert after: ${searchQuery}`,
+      shortcut: [],
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertAfterNode(selectionState.selectedNode, t.jsxText(searchQuery)),
+    },
+    insertTextChild: {
+      showIf:
+        searchQuery !== '' &&
+        selectionState.type === 'elementSelected' &&
+        selectionState.selectedNode instanceof HTMLElement,
+      section: sections.insertText,
+      name: `Insert child: ${searchQuery}`,
+      shortcut: [],
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertChild(
+          selectionState.selectedNode as HTMLElement,
+          t.jsxText(searchQuery),
+        ),
+    },
   }
 
   useRegisterActions(
-    [
-      ...Object.entries(actions).map(([key, action]) => ({
+    Object.entries(actions)
+      .filter(([, action]) => action.showIf !== false)
+      .map(([key, action]) => ({
         ...action,
         id: key,
       })),
-      ...(selectionState.type === 'elementSelected'
-        ? [
-            ...(selectionState.selectedNode instanceof HTMLElement
-              ? [
-                  ...Array.from(selectionState.selectedNode.classList).map(
-                    (className) => ({
-                      id: `remove-class-${className}`,
-                      name: `${className}`,
-                      shortcut: [],
-                      section: 'Remove class',
-                      perform: () =>
-                        selectionState.type === 'elementSelected' &&
-                        removeClass(
-                          selectionState.selectedNode as HTMLElement,
-                          className,
-                        ),
-                    }),
-                  ),
-
-                  {
-                    section: 'General',
-                    id: 'insert-child',
-                    name: 'Insert child',
-                    shortcut: [],
-                    perform: () =>
-                      selectionState.type === 'elementSelected' &&
-                      insertChild(selectionState.selectedNode as HTMLElement),
-                  },
-                ]
-              : []),
-          ]
-        : []),
-    ],
-    [selectionState, __rerenderValue, currentRootActionId, searchQuery],
+    [actions],
   )
 
   // click
@@ -878,3 +1073,123 @@ function SelectionBoxChild(props: { selectedNode: Node }) {
     ></div>
   )
 }
+
+const htmlTags = [
+  'a',
+  'abbr',
+  'address',
+  'area',
+  'article',
+  'aside',
+  'audio',
+  'b',
+  'base',
+  'bdi',
+  'bdo',
+  'blockquote',
+  'body',
+  'br',
+  'button',
+  'canvas',
+  'caption',
+  'cite',
+  'code',
+  'col',
+  'colgroup',
+  'data',
+  'datalist',
+  'dd',
+  'del',
+  'details',
+  'dfn',
+  'dialog',
+  'dir',
+  'div',
+  'dl',
+  'dt',
+  'em',
+  'embed',
+  'fieldset',
+  'figcaption',
+  'figure',
+  'font',
+  'footer',
+  'form',
+  'frame',
+  'frameset',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'head',
+  'header',
+  'hgroup',
+  'hr',
+  'html',
+  'i',
+  'iframe',
+  'img',
+  'input',
+  'ins',
+  'kbd',
+  'label',
+  'legend',
+  'li',
+  'link',
+  'main',
+  'map',
+  'mark',
+  'marquee',
+  'menu',
+  'meta',
+  'meter',
+  'nav',
+  'noscript',
+  'object',
+  'ol',
+  'optgroup',
+  'option',
+  'output',
+  'p',
+  'param',
+  'picture',
+  'pre',
+  'progress',
+  'q',
+  'rp',
+  'rt',
+  'ruby',
+  's',
+  'samp',
+  'script',
+  'section',
+  'select',
+  'slot',
+  'small',
+  'source',
+  'span',
+  'strong',
+  'style',
+  'sub',
+  'summary',
+  'sup',
+  'table',
+  'tbody',
+  'td',
+  'template',
+  'textarea',
+  'tfoot',
+  'th',
+  'thead',
+  'time',
+  'title',
+  'tr',
+  'track',
+  'u',
+  'ul',
+  'var',
+  'video',
+  'wbr',
+]

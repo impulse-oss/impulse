@@ -107,7 +107,7 @@ function ElementDetails(props: { node: Node }) {
 
   if (!(node instanceof HTMLElement)) {
     const text = node.textContent || '<empty string>'
-    return <>{truncate(text, 50)}</>
+    return <>"{truncate(text, 50)}"</>
   }
 
   return (

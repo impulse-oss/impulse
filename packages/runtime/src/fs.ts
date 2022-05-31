@@ -4,7 +4,9 @@ import { getReactFiber } from './react-source'
 
 export async function fsGetSourceForNode(
   element: Node,
-  requestDirHandle: (params: {mode: FileSystemPermissionMode}) => Promise<FileSystemDirectoryHandle | null>,
+  requestDirHandle: (params: {
+    mode: FileSystemPermissionMode
+  }) => Promise<FileSystemDirectoryHandle | null>,
 ) {
   const fiber = getReactFiber(element)
   if (!fiber) {
@@ -85,10 +87,14 @@ export async function fsWriteToFile(
   fileHandle: FileSystemFileHandle,
   data: string,
 ): Promise<void> {
-  await fileHandle.requestPermission({ mode: 'readwrite' })
-  const writeStream = await fileHandle.createWritable()
-  await writeStream.write(data)
-  await writeStream.close()
+  const save = async () => {
+    await fileHandle.requestPermission({ mode: 'readwrite' })
+    const writeStream = await fileHandle.createWritable()
+    await writeStream.write(data)
+    await writeStream.close()
+  }
+
+  await save()
 }
 
 export async function detectRootPath(
@@ -141,9 +147,7 @@ export function fileToText(file: File): Promise<string> {
 export function useDirHandle() {
   const dirHandlerRef = useRef<FileSystemDirectoryHandle | null>(null)
 
-  const getDirHandle = async (params: {
-    mode: FileSystemPermissionMode
-  }) => {
+  const getDirHandle = async (params: { mode: FileSystemPermissionMode }) => {
     const dirHandler = await (async () => {
       const handlerFromRef = dirHandlerRef.current
 
