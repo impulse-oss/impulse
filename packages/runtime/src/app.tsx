@@ -1,5 +1,5 @@
-import { NodePath, TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
+import animatedScrollTo from 'animated-scroll-to'
 import {
   Action,
   KBarAnimator,
@@ -16,28 +16,36 @@ import {
 } from 'kbar'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import {
-  findNodeAmongJsxChildren,
-  isSourceJsxElement,
   JSXNode,
-  transformCode,
   transformNodeInCode,
   writeTransformationResultToFile,
+  isNotEmptyNode,
 } from './ast'
 import {
   elementGetAbsolutePosition,
   observeNode,
   waitForAnyNodeMutation,
 } from './dom'
-import { fsGetSourceForNode, fsWriteToFile, useDirHandle } from './fs'
+import { useDirHandle } from './fs'
 import { ElementNavbar } from './navbar'
-import { FiberSource, getReactFiber } from './react-source'
+import {
+  Fiber,
+  elementGetOwnerWithSource,
+  FiberSource,
+  getReactFiber,
+  nodeIsComponentRoot,
+} from './react-source'
 
 declare global {
   interface Window {
-    $i?: Node
+    $__i?: {
+      e: Node
+      f?: Fiber | null
+    }
   }
   interface Node {
     __impulseHide?: boolean
+    __impulseDirty?: boolean
   }
 }
 
@@ -98,7 +106,7 @@ function ImpulseApp() {
       indexInsideParent,
     })
 
-    window.$i = selectedElement
+    window.$__i = { e: selectedElement, f: getReactFiber(selectedElement) }
   }
 
   const removeElementSelection = () => {
@@ -205,28 +213,18 @@ function ImpulseApp() {
 
   const { getDirHandle } = useDirHandle()
 
-  const jumpToCode = async (selectedElement: Node) => {
-    const source = getReactFiber(selectedElement)?._debugSource
-    const parentSource = selectedElement.parentElement
-      ? getReactFiber(selectedElement.parentElement)?._debugSource
-      : undefined
+  const jumpToCode = async (selectedNode: Node) => {
+    const fiber = getReactFiber(selectedNode)
+    const source = fiber?._debugSource
 
-    if (selectedElement instanceof HTMLElement) {
-      if (!source) {
-        return
-      }
-
+    if (selectedNode instanceof HTMLElement && source) {
       const vscodeLink = makeVscodeLink(source)
       window.open(vscodeLink)
       return
     }
 
-    if (!parentSource) {
-      return
-    }
-
     const transformResult = await transformNodeInCode(
-      selectedElement,
+      selectedNode,
       (path) => {
         return path.node
       },
@@ -237,19 +235,46 @@ function ImpulseApp() {
       return
     }
 
-    const targetJsxText = transformResult.visitorResult
+    const targetJsxNode = transformResult.visitorResult
 
-    if (!targetJsxText?.loc) {
+    if (!targetJsxNode?.loc) {
       return
     }
 
+    const loc =
+      targetJsxNode.type === 'JSXElement'
+        ? targetJsxNode.openingElement.loc?.start ?? targetJsxNode.loc.start
+        : targetJsxNode.loc.end
+
     const vscodeLink = makeVscodeLink({
-      ...parentSource,
-      lineNumber: targetJsxText.loc.end.line,
-      columnNumber: targetJsxText.loc.end.column + 1,
+      fileName: transformResult.file.path,
+      lineNumber: loc.line,
+      columnNumber: loc.column + 1,
     })
     window.open(vscodeLink)
 
+    return
+  }
+
+  const jumpToComponentCall = (selectedNode: Node) => {
+    const source = (() => {
+      if (selectedNode instanceof HTMLElement) {
+        return elementGetOwnerWithSource(selectedNode)?._debugSource
+      }
+
+      if (selectedNode.parentElement) {
+        return elementGetOwnerWithSource(selectedNode.parentElement)?._debugSource
+      }
+
+      return null
+    })()
+
+    if (!source) {
+      return
+    }
+
+    const vscodeLink = makeVscodeLink(source)
+    window.open(vscodeLink)
     return
   }
 
@@ -257,17 +282,9 @@ function ImpulseApp() {
     selectedElement: HTMLElement,
     classNameToRemove: string,
   ) => {
-    const sourceFile = await fsGetSourceForNode(selectedElement, getDirHandle)
-    if (!sourceFile) {
-      return
-    }
-
-    const visitor: TraverseOptions = {
-      JSXElement({ node }) {
-        if (!isSourceJsxElement(node, sourceFile.fiberSource)) {
-          return
-        }
-
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      ({ node }) => {
         const attributes = node.openingElement.attributes
 
         const existingClassNameAttribute = attributes.find(
@@ -305,33 +322,28 @@ function ImpulseApp() {
           newClassList.join(' '),
         )
       },
-    }
+      await getDirHandle({ mode: 'readwrite' }),
+    )
 
-    const code = transformCode(sourceFile.text, visitor).code!
+    if (transformResult.type === 'error') {
+      return
+    }
 
     selectedElement.classList.remove(classNameToRemove)
     if (selectedElement.classList.length === 0) {
       selectedElement.removeAttribute('class')
     }
-    await fsWriteToFile(sourceFile.fileHandle, code)
+    await writeTransformationResultToFile(transformResult)
   }
 
   const addClass = async (
     selectedElement: HTMLElement,
     classNameToAdd: string,
   ) => {
-    const sourceFile = await fsGetSourceForNode(selectedElement, getDirHandle)
-    if (!sourceFile) {
-      return
-    }
-
-    const visitor: TraverseOptions = {
-      JSXElement(path) {
-        if (!isSourceJsxElement(path.node, sourceFile.fiberSource)) {
-          return
-        }
-
-        const attributes = path.node.openingElement.attributes
+    const transformResult = await transformNodeInCode(
+      selectedElement,
+      ({ node }) => {
+        const attributes = node.openingElement.attributes
 
         const existingClassNameAttribute = attributes.find(
           (attribute) =>
@@ -364,12 +376,15 @@ function ImpulseApp() {
 
         attributes.push(className)
       },
+      await getDirHandle({ mode: 'readwrite' }),
+    )
+
+    if (transformResult.type === 'error') {
+      return
     }
 
-    const code = transformCode(sourceFile.text, visitor).code!
-
     selectedElement.classList.add(classNameToAdd)
-    await fsWriteToFile(sourceFile.fileHandle, code)
+    await writeTransformationResultToFile(transformResult)
   }
 
   const removeNode = async (selectedElement: Node) => {
@@ -427,8 +442,8 @@ function ImpulseApp() {
 
     await waitForAnyNodeMutation(selectedElement)
 
-    if (selectedElement.previousSibling) {
-      setSelectedElement(selectedElement.previousSibling!)
+    if (selectedElement.previousSibling && selectedElement.previousSibling.parentElement) {
+      setSelectedElement(selectedElement.previousSibling)
     }
   }
 
@@ -513,19 +528,11 @@ function ImpulseApp() {
       selectedElement,
       (path) => {
         const parent = path.parentPath.node
-        if (parent.type !== 'JSXElement') {
+        if (parent.type !== 'JSXElement' && parent.type !== 'JSXFragment') {
           return
         }
 
-        const children = parent.children.filter((childNode) => {
-          if (
-            childNode.type === 'JSXText' &&
-            childNode.value.trim().length === 0
-          ) {
-            return false
-          }
-          return true
-        })
+        const children = parent.children.filter(isNotEmptyNode)
 
         const index = children.indexOf(path.node)
         const siblingIndex = direction === 'up' ? index - 1 : index + 1
@@ -541,6 +548,9 @@ function ImpulseApp() {
         parent.children = children
       },
       await getDirHandle({ mode: 'readwrite' }),
+      {
+        prefer: nodeIsComponentRoot(selectedElement) ? 'owner' : 'parent'
+      }
     )
 
     if (transformResult.type === 'error') {
@@ -559,11 +569,10 @@ function ImpulseApp() {
     const newChildIndex =
       selectionState.indexInsideParent + (direction === 'up' ? -1 : 1)
 
-    // for some reason, Vite fast refresh doesn't fully recreate the dom on first save, some of the time
     await writeTransformationResultToFile(transformResult)
     await waitForAnyNodeMutation(selectedElement)
 
-    const sibling = parent.children[newChildIndex]
+    const sibling = parent.childNodes[newChildIndex]
     if (sibling) {
       setSelectedElement(sibling)
     }
@@ -601,6 +610,16 @@ function ImpulseApp() {
         selectionState.type === 'elementSelected' &&
         jumpToCode(selectionState.selectedNode),
     },
+    jumpToCodeCall: {
+      showIf: selectionState.type === 'elementSelected',
+      name: 'Jump to component call',
+      shortcut: ['Shift+c'],
+      keywords: 'jump component call',
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        jumpToComponentCall(selectionState.selectedNode),
+    },
     removeElement: {
       showIf: selectionState.type === 'elementSelected',
       name: 'Remove element',
@@ -615,7 +634,7 @@ function ImpulseApp() {
         selectionState.type === 'elementSelected' &&
         !!selectionState.selectedNode.previousSibling,
       name: 'Move up',
-      shortcut: ['m', 'u'],
+      shortcut: ['Shift+k'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
@@ -626,7 +645,7 @@ function ImpulseApp() {
         selectionState.type === 'elementSelected' &&
         !!selectionState.selectedNode.nextSibling,
       name: 'Move down',
-      shortcut: ['m', 'd'],
+      shortcut: ['Shift+j'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
@@ -748,7 +767,6 @@ function ImpulseApp() {
     insertTextBefore: {
       showIf:
         selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof HTMLElement &&
         searchQuery !== '',
       section: sections.insertText,
       name: `Insert before: ${searchQuery}`,
@@ -760,7 +778,6 @@ function ImpulseApp() {
     insertTextAfter: {
       showIf:
         selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof HTMLElement &&
         searchQuery !== '',
       section: sections.insertText,
       name: `Insert after: ${searchQuery}`,
@@ -841,7 +858,7 @@ function ImpulseApp() {
         return
       }
 
-      if (event.altKey || event.ctrlKey || event.metaKey) {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
         return
       }
 
@@ -922,6 +939,60 @@ function ImpulseApp() {
     }
   }, [selectionState])
 
+  useEffect(() => {
+    if (selectionState.type !== 'elementSelected') {
+      return
+    }
+
+    if (!(selectionState.selectedNode instanceof HTMLElement)) {
+      return
+    }
+
+    animatedScrollTo(selectionState.selectedNode, {
+      verticalOffset: -100,
+    })
+  }, [selectionState])
+
+  useEffect(() => {
+    ;(window as any).$_impulseTest = async (rootNode: Node) => {
+      if (rootNode instanceof HTMLElement && rootNode.id === 'impulse-root') {
+        return
+      }
+
+      const transformResult = await transformNodeInCode(
+        rootNode,
+        (path) => {
+          return path.node
+        },
+        await getDirHandle({ mode: 'read' }),
+      )
+
+      if (transformResult.type === 'error') {
+        // rootNode.style.backgroundColor = 'red'
+        console.log('Running test for', rootNode, 'error')
+      }
+
+      if (
+        transformResult.type === 'success' &&
+        !transformResult.visitorResult
+      ) {
+        console.log('Running test for', rootNode, 'no result')
+      }
+
+      if (
+        transformResult.type === 'success' &&
+        transformResult.visitorResult &&
+        !(rootNode instanceof HTMLElement)
+      ) {
+        // console.log('Running test for', rootNode, transformResult.visitorResult)
+      }
+
+      if (rootNode instanceof HTMLElement) {
+        ;[...rootNode.childNodes].map((window as any).$_impulseTest)
+      }
+    }
+  }, [])
+
   return (
     // <ImpulseAppContext.Provider
     //   value={{
@@ -939,7 +1010,7 @@ function ImpulseApp() {
               <SelectionBoxParent
                 selectedElement={selectionState.selectedNode.parentElement}
               />
-              {Array.from(selectionState.selectedNode.parentElement.children)
+              {Array.from(selectionState.selectedNode.parentElement.childNodes)
                 .filter((element) => {
                   return element !== selectionState.selectedNode
                 })
@@ -963,7 +1034,7 @@ function ImpulseApp() {
         </>
       )}
       <KBarPortal>
-        <KBarPositioner className="impulse-styles" style={{ zIndex: 150 }}>
+        <KBarPositioner className="impulse-styles" style={{ zIndex: 100100 }}>
           <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
             <KBarSearch className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0" />
             <RenderResults />
@@ -1015,7 +1086,7 @@ function SelectionBox(props: { selectedElement: Node }) {
 
   return (
     <div
-      className="pointer-events-none absolute z-[100]"
+      className="pointer-events-none absolute z-[10000]"
       style={{
         outline: '2px solid #0399FF',
         ...absolutePosition,

@@ -1,39 +1,68 @@
+import { BabelFileResult } from '@babel/core'
 import { transform } from '@babel/standalone'
 import { NodePath, TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
 import prettier from 'prettier'
 import parserBabel from 'prettier/parser-babel'
 import { fsGetFileContents, fsWriteToFile, OpenFile } from './fs'
-import { FiberSource, getReactFiber } from './react-source'
+import { trace, warn } from './logger'
+import {
+  elementGetOwnerWithSource,
+  fiberGetSiblings,
+  FiberSource,
+  fiberTags,
+  getReactFiber,
+} from './react-source'
 
 export type JSXNode = t.JSXElement['children'][0]
 
-export function transformCode(inputCode: string, visitor: TraverseOptions) {
-  const transformResult = transform(inputCode, {
-    plugins: [{ visitor }],
-    parserOpts: {
-      sourceType: 'unambiguous',
-      plugins: ['typescript', 'jsx'],
-    },
-    generatorOpts: {
-      retainLines: true,
-      comments: true,
-      retainFunctionParens: true,
-    },
-  })
+export type TransformResult = TransformResultSuccess | TransformResultError
+export type TransformResultSuccess = {
+  type: 'success'
+  babelResult: BabelFileResult
+}
+export type TransformResultError = {
+  type: 'error'
+  error: Error
+}
 
-  return {
-    ...transformResult,
-    code: transformResult.code
-      ? prettier.format(transformResult.code, {
-          parser: 'babel',
-          plugins: [parserBabel],
-        })
-      : transformResult.code,
+export function transformCode(
+  inputCode: string,
+  visitor: TraverseOptions,
+): TransformResult {
+  try {
+    const transformResult = transform(inputCode, {
+      plugins: [{ visitor }],
+      parserOpts: {
+        sourceType: 'unambiguous',
+        plugins: ['typescript', 'jsx'],
+      },
+      generatorOpts: {
+        retainLines: true,
+        comments: true,
+        retainFunctionParens: true,
+      },
+    })
+
+    return {
+      type: 'success',
+      babelResult: {
+        ...transformResult,
+        code: transformResult.code
+          ? prettier.format(transformResult.code, {
+              parser: 'babel-ts',
+              plugins: [parserBabel],
+            })
+          : transformResult.code,
+      },
+    }
+  } catch (e) {
+    console.warn('code transformation error', e)
+    return { type: 'error', error: e as Error }
   }
 }
 
-export type TransformResultSuccess<R> = {
+export type TransformNodeResultSuccess<R> = {
   type: 'success'
   file: OpenFile
   code: string
@@ -42,61 +71,239 @@ export type TransformResultSuccess<R> = {
 
 export async function transformNodeInCode<T extends Node, R>(
   domNode: T,
-  visitor: T extends HTMLElement
-    ? (path: NodePath<t.JSXElement>) => R
-    : (path: NodePath<JSXNode>) => R,
+  visitor: (
+    path: NodePath<T extends HTMLElement ? t.JSXElement : JSXNode>,
+  ) => R,
   dirHandle: FileSystemDirectoryHandle,
-): Promise<TransformResultSuccess<R> | { type: 'error' }> {
-  const source = (() => {
-    if (domNode instanceof HTMLElement) {
-      return getReactFiber(domNode)?._debugSource
-    }
-
-    if (domNode.parentElement) {
-      return getReactFiber(domNode.parentElement)?._debugSource
-    }
-
-    return undefined
-  })()
-
-  if (!source) {
+  options?: {
+    prefer?: 'parent' | 'owner'
+  },
+): Promise<TransformNodeResultSuccess<R> | { type: 'error' }> {
+  const prefer = options?.prefer ?? 'parent'
+  const cTrace = (...messages: any) => {
+    return trace('transformNodeInCode', ...messages)
+  }
+  domNode.__impulseDirty = true
+  if (!domNode.parentElement) {
+    cTrace('domNode.parentElement is null')
     return { type: 'error' }
   }
 
-  const file = await fsGetFileContents(dirHandle, source.fileName)
+  const fiber = getReactFiber(domNode)
+  const source = fiber?._debugSource
+  const parentFiber = fiber?.return
+
+  const parentElementFiber = getReactFiber(domNode.parentElement)
+  const parentElementSource = parentElementFiber?._debugSource
+
+  const fileSrc =
+    source?.fileName ??
+    parentElementSource?.fileName ??
+    elementGetOwnerWithSource(domNode)?._debugSource?.fileName ??
+    elementGetOwnerWithSource(domNode.parentElement)?._debugSource?.fileName
+
+  if (!fileSrc) {
+    return { type: 'error' }
+  }
+
+  const file = await fsGetFileContents(dirHandle, fileSrc)
   if (!file) {
+    cTrace('could not open file', fileSrc)
     return { type: 'error' }
   }
+
+  const ownerWithSource =
+    elementGetOwnerWithSource(domNode) ??
+    elementGetOwnerWithSource(domNode.parentElement)
 
   const isSourceJsxNode = (path: NodePath<JSXNode>) => {
-    const parentJsxElement = path.parentPath.node
-    if (parentJsxElement.type !== 'JSXElement') {
+    // regular JSXElement: rely on its fiber's source
+    if (domNode instanceof HTMLElement) {
+      const isExternalComponent = !source && fiber?._debugOwner
+      // component from node_modules?
+      if (isExternalComponent || prefer === 'owner') {
+        return (
+          ownerWithSource?._debugSource &&
+          path.isJSXElement() &&
+          isSourceJsxElement(path.node, ownerWithSource._debugSource)
+        )
+      }
+
+      return (
+        source && path.isJSXElement() && isSourceJsxElement(path.node, source)
+      )
+    }
+
+    // text node is the only child - and it doesn't have a fiber
+    if (!(domNode instanceof HTMLElement) && !fiber && parentElementFiber) {
+      if (!path.parentPath.isJSXElement()) {
+        return false
+      }
+
+      const parentOwner = parentElementFiber?._debugOwner?._debugSource
+        ? parentElementFiber._debugOwner
+        : ownerWithSource
+
+      const props = parentElementFiber.memoizedProps ?? {}
+      const children = props.children
+
+      if (typeof children !== 'string') {
+        return false
+      }
+
+      // the text node is the child of a component
+      if (
+        parentOwner?._debugSource &&
+        parentOwner.memoizedProps?.children === children
+      ) {
+        return isSourceJsxElement(
+          path.parentPath.node,
+          parentOwner._debugSource,
+        )
+      }
+
+      if (
+        parentElementFiber._debugSource &&
+        isSourceJsxElement(
+          path.parentPath.node,
+          parentElementFiber._debugSource,
+        )
+      ) {
+        return true
+      }
+    }
+
+    // text node inside a fragment - find the grand parent
+    const foundTextInsideFragment = (() => {
+      if (!fiber) {
+        return false
+      }
+      const parentFiber = fiber.return
+      if (!parentFiber) {
+        return false
+      }
+
+      const parentPath = path.parentPath
+      if (!parentPath.isJSXFragment()) {
+        return false
+      }
+
+      const fiberSiblings = fiberGetSiblings(fiber)
+
+      const fiberElementSibling = fiberSiblings.find(
+        (fiber) => fiber.stateNode instanceof HTMLElement,
+      )
+
+      if (fiberElementSibling) {
+        const siblingSource = fiberElementSibling._debugSource
+        if (!siblingSource) {
+          return false
+        }
+
+        const siblingJsxElement =
+          parentPath.node.children.filter(isNotEmptyNode)[
+            fiberElementSibling.index
+          ]
+        if (
+          siblingJsxElement?.type !== 'JSXElement' ||
+          !isSourceJsxElement(siblingJsxElement, siblingSource)
+        ) {
+          return false
+        }
+
+        const targetJsxElement =
+          parentPath.node.children.filter(isNotEmptyNode)[fiber.index]
+        if (path.node !== targetJsxElement) {
+          return false
+        }
+
+        return true
+      }
+
+      const grandParentFiber = parentFiber.return
+      const grandParentSource = grandParentFiber?._debugSource
+      const grandParentPath = parentPath.parentPath
+      if (!grandParentPath.isJSXElement()) {
+        return false
+      }
+
+      if (!grandParentSource) {
+        return false
+      }
+
+      if (!isSourceJsxElement(grandParentPath.node, grandParentSource)) {
+        return false
+      }
+
+      if (
+        grandParentPath.node.children.filter(isNotEmptyNode)[
+          parentFiber.index
+        ] !== path.parentPath.node
+      ) {
+        return false
+      }
+
+      if (
+        parentPath.node.children.filter(isNotEmptyNode)[fiber.index] !==
+        path.node
+      ) {
+        return false
+      }
+
+      return true
+    })()
+
+    if (foundTextInsideFragment) {
+      return true
+    }
+
+    const parentPath = path.parentPath
+    if (!parentPath.isJSXElement()) {
       return false
     }
 
-    if (!isSourceJsxElement(parentJsxElement, source)) {
+    if (
+      !parentFiber?._debugSource ||
+      !isSourceJsxElement(parentPath.node, parentFiber._debugSource)
+    ) {
       return false
     }
 
-    const targetJsxNode = findNodeAmongJsxChildren(domNode, parentJsxElement)
+    const targetJsxNode = findNodeAmongJsxChildren(domNode, parentPath.node)
+
+    if (targetJsxNode === path.node) {
+      cTrace('source element found, text node inside tag', path.node)
+    }
 
     return targetJsxNode === path.node
   }
 
+  let visiorHasBeenCalled = false
   let visitorResult: undefined | R = undefined
+  const visitorOnce = (
+    path: NodePath<T extends HTMLElement ? t.JSXElement : JSXNode>,
+  ) => {
+    if (visiorHasBeenCalled) {
+      console.warn('mathched more than one node', domNode, path)
+      return visitorResult
+    }
+
+    visiorHasBeenCalled = true
+
+    return visitor(path)
+  }
 
   const transformResult = transformCode(
     file.text,
     domNode instanceof HTMLElement
       ? {
           JSXElement: (path) => {
-            if (!isSourceJsxElement(path.node, source)) {
+            if (!isSourceJsxNode(path)) {
               return
             }
-
-            visitorResult = (visitor as (path: NodePath<t.JSXElement>) => R)(
-              path,
-            )
+            visitorResult = (
+              visitorOnce as (path: NodePath<t.JSXElement>) => R
+            )(path)
           },
         }
       : {
@@ -104,16 +311,18 @@ export async function transformNodeInCode<T extends Node, R>(
             if (!isSourceJsxNode(path)) {
               return
             }
-            visitorResult = (visitor as (path: NodePath<t.JSXText>) => R)(path)
+            visitorResult = (visitorOnce as (path: NodePath<t.JSXText>) => R)(
+              path,
+            )
           },
 
           JSXFragment: (path) => {
             if (!isSourceJsxNode(path)) {
               return
             }
-            visitorResult = (visitor as (path: NodePath<t.JSXFragment>) => R)(
-              path,
-            )
+            visitorResult = (
+              visitorOnce as (path: NodePath<t.JSXFragment>) => R
+            )(path)
           },
 
           JSXExpressionContainer: (path) => {
@@ -121,7 +330,7 @@ export async function transformNodeInCode<T extends Node, R>(
               return
             }
             visitorResult = (
-              visitor as (path: NodePath<t.JSXExpressionContainer>) => R
+              visitorOnce as (path: NodePath<t.JSXExpressionContainer>) => R
             )(path)
           },
 
@@ -130,52 +339,75 @@ export async function transformNodeInCode<T extends Node, R>(
               return
             }
             visitorResult = (
-              visitor as (path: NodePath<t.JSXSpreadChild>) => R
+              visitorOnce as (path: NodePath<t.JSXSpreadChild>) => R
             )(path)
           },
         },
   )
 
+  if (transformResult.type === 'error') {
+    return {type: 'error'}
+  }
+
   return {
     type: 'success',
     file,
-    code: transformResult.code!,
+    code: transformResult.babelResult.code!,
     visitorResult,
   }
 }
 
 export function writeTransformationResultToFile(
-  transformResult: TransformResultSuccess<unknown>,
+  transformResult: TransformNodeResultSuccess<unknown>,
 ) {
   return fsWriteToFile(transformResult.file.fileHandle, transformResult.code)
 }
 
-export function findNodeAmongJsxChildren(
+function findNodeAmongJsxChildren(
   domNode: Node,
   parentJsxElement: t.JSXElement,
 ) {
-  const siblings = Array.from(domNode.parentElement!.childNodes) as Node[]
-  const indexInsideParent = siblings.indexOf(domNode)
+  const fiber = getReactFiber(domNode)
+  const fiberParent = fiber?.return
+  if (!fiber || !fiberParent) {
+    return
+  }
 
-  const targetJsxNode = parentJsxElement!.children.filter((childNode) => {
-    // emtpy JSXText nodes don't render anything and thus aren't found among DOM nodes
-    if (childNode.type === 'JSXText' && childNode.value.trim().length === 0) {
-      return false
-    }
-    return true
-  })[indexInsideParent]
+  const indexInsideParent = fiber.index
+
+  const targetJsxNode =
+    parentJsxElement!.children.filter(isNotEmptyNode)[indexInsideParent]
 
   return targetJsxNode
 }
 
-export function isSourceJsxElement(
-  node: t.JSXElement,
-  fiberSource: FiberSource,
-) {
+function isSourceJsxElement(node: t.JSXElement, fiberSource: FiberSource) {
   const loc = node.openingElement.name.loc
   const isTargetTag =
     loc?.start.line === fiberSource.lineNumber &&
     loc?.start.column === fiberSource.columnNumber
 
   return isTargetTag
+}
+
+function isSourceJsxFragment(node: t.JSXFragment, fiberSource: FiberSource) {
+  const loc = node.openingFragment.loc
+  const isTargetTag =
+    loc?.start.line === fiberSource.lineNumber &&
+    loc?.start.column === fiberSource.columnNumber
+
+  return isTargetTag
+}
+
+export function isNotEmptyNode(node: JSXNode) {
+  if (node.type === 'JSXText' && node.value.trim().length === 0) {
+    return false
+  }
+  if (
+    node.type === 'JSXExpressionContainer' &&
+    node.expression.type === 'JSXEmptyExpression'
+  ) {
+    return false
+  }
+  return true
 }

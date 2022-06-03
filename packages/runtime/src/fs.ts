@@ -14,7 +14,9 @@ export async function fsGetSourceForNode(
   }
 
   const source = fiber._debugSource
-
+  if (!source) {
+    return null
+  }
   const dirHandle = await requestDirHandle({ mode: 'readwrite' })
   if (!dirHandle) {
     return null
@@ -32,6 +34,7 @@ export async function fsGetSourceForNode(
 }
 
 export type OpenFile = {
+  path: string
   text: string
   fileHandle: FileSystemFileHandle
 }
@@ -55,7 +58,7 @@ export async function fsGetFileContents(
 
   const text = await fileToText(await fileHandle.getFile())
 
-  return { text, fileHandle }
+  return { text, fileHandle, path }
 }
 
 export async function fsGetFile(
