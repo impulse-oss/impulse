@@ -76,10 +76,10 @@ export async function transformNodeInCode<T extends Node, R>(
   ) => R,
   dirHandle: FileSystemDirectoryHandle,
   options?: {
-    prefer?: 'parent' | 'owner'
+    preferAncestor?: 'parent' | 'owner'
   },
 ): Promise<TransformNodeResultSuccess<R> | { type: 'error' }> {
-  const prefer = options?.prefer ?? 'parent'
+  const preferAncestor = options?.preferAncestor ?? 'parent'
   const cTrace = (...messages: any) => {
     return trace('transformNodeInCode', ...messages)
   }
@@ -120,8 +120,7 @@ export async function transformNodeInCode<T extends Node, R>(
     // regular JSXElement: rely on its fiber's source
     if (domNode instanceof HTMLElement) {
       const isExternalComponent = !source && fiber?._debugOwner
-      // component from node_modules?
-      if (isExternalComponent || prefer === 'owner') {
+      if (isExternalComponent || preferAncestor === 'owner') {
         return (
           ownerWithSource?._debugSource &&
           path.isJSXElement() &&

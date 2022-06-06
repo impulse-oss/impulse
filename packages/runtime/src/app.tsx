@@ -263,7 +263,8 @@ function ImpulseApp() {
       }
 
       if (selectedNode.parentElement) {
-        return elementGetOwnerWithSource(selectedNode.parentElement)?._debugSource
+        return elementGetOwnerWithSource(selectedNode.parentElement)
+          ?._debugSource
       }
 
       return null
@@ -442,7 +443,10 @@ function ImpulseApp() {
 
     await waitForAnyNodeMutation(selectedElement)
 
-    if (selectedElement.previousSibling && selectedElement.previousSibling.parentElement) {
+    if (
+      selectedElement.previousSibling &&
+      selectedElement.previousSibling.parentElement
+    ) {
       setSelectedElement(selectedElement.previousSibling)
     }
   }
@@ -549,8 +553,10 @@ function ImpulseApp() {
       },
       await getDirHandle({ mode: 'readwrite' }),
       {
-        prefer: nodeIsComponentRoot(selectedElement) ? 'owner' : 'parent'
-      }
+        preferAncestor: nodeIsComponentRoot(selectedElement)
+          ? 'owner'
+          : 'parent',
+      },
     )
 
     if (transformResult.type === 'error') {
@@ -621,7 +627,9 @@ function ImpulseApp() {
         jumpToComponentCall(selectionState.selectedNode),
     },
     removeElement: {
-      showIf: selectionState.type === 'elementSelected' && !'turn off because it is dangerous',
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        !'turn off because it is dangerous',
       name: 'Remove element',
       shortcut: ['d', 'd'],
       section: sections.general,
@@ -765,9 +773,7 @@ function ImpulseApp() {
         )
       : {}),
     insertTextBefore: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        searchQuery !== '',
+      showIf: selectionState.type === 'elementSelected' && searchQuery !== '',
       section: sections.insertText,
       name: `Insert before: ${searchQuery}`,
       shortcut: [],
@@ -776,9 +782,7 @@ function ImpulseApp() {
         insertBeforeNode(selectionState.selectedNode, t.jsxText(searchQuery)),
     },
     insertTextAfter: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        searchQuery !== '',
+      showIf: selectionState.type === 'elementSelected' && searchQuery !== '',
       section: sections.insertText,
       name: `Insert after: ${searchQuery}`,
       shortcut: [],
