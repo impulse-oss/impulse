@@ -46,10 +46,10 @@ export const ElementNavbar = forwardRef(
     return (
       <div
         ref={ref}
-        className="fixed w-full bottom-0 z-[10050] text-xs font-mono"
+        className="fixed w-full bottom-0 z-[10050] text-xs font-mono pointer-events-none"
       >
         <div
-          className="mx-auto drop-shadow-lg grid justify-center w-2/3 bg-white min-w-[680px] h-[200px] rounded-t-lg border-t border-x border-slate-300"
+          className="mx-auto drop-shadow-lg grid justify-center w-2/3 bg-white min-w-[680px] h-[200px] rounded-t-lg border-t border-x border-slate-300 pointer-events-auto"
           style={{
             gridTemplateColumns: '1fr 5fr 1fr',
           }}

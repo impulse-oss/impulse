@@ -3,5 +3,5 @@ export function trace(...messages: any) {
 }
 
 export function warn(...messages: any) {
-  // console.warn(...messages)
+  console.warn(...messages)
 }

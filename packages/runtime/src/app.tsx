@@ -27,6 +27,7 @@ import {
   waitForAnyNodeMutation,
 } from './dom'
 import { useDirHandle } from './fs'
+import { warn } from './logger'
 import { ElementNavbar } from './navbar'
 import {
   Fiber,
@@ -62,6 +63,14 @@ export function ImpulseRoot() {
     >
       <KBarProvider options={{ disableScrollbarManagement: true }}>
         <ImpulseApp />
+        <KBarPortal>
+          <KBarPositioner className="impulse-styles" style={{ zIndex: 100100 }}>
+            <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
+              <KBarSearch className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0" />
+              <RenderResults />
+            </KBarAnimator>
+          </KBarPositioner>
+        </KBarPortal>
       </KBarProvider>
     </div>
   )
@@ -73,18 +82,21 @@ const ImpulseAppContext = createContext<{
   rerender: () => void
 }>({ __rerenderValue: 0, selectedElement: null, rerender: () => {} })
 
+type SelectionState =
+  | {
+      type: 'elementSelected'
+      selectedNode: Node
+      parentElement: HTMLElement
+      indexInsideParent: number
+    }
+  | {
+      type: 'elementNotSelected'
+    }
+
 function ImpulseApp() {
-  const [selectionState, setSelectionState] = useState<
-    | {
-        type: 'elementSelected'
-        selectedNode: Node
-        parentElement: HTMLElement
-        indexInsideParent: number
-      }
-    | {
-        type: 'elementNotSelected'
-      }
-  >({ type: 'elementNotSelected' })
+  const [selectionState, setSelectionState] = useState<SelectionState>({
+    type: 'elementNotSelected',
+  })
 
   const setSelectedElement = (
     selectedElement: Node,
@@ -286,6 +298,9 @@ function ImpulseApp() {
     const transformResult = await transformNodeInCode(
       selectedElement,
       ({ node }) => {
+        const cWarn = (...messages: any) => {
+          return warn('removeClass', ...messages)
+        }
         const attributes = node.openingElement.attributes
 
         const existingClassNameAttribute = attributes.find(
@@ -295,11 +310,16 @@ function ImpulseApp() {
         ) as t.JSXAttribute
 
         if (!existingClassNameAttribute) {
+          cWarn('removeClass: no className attribute found')
           return
         }
 
         const classNameAttrValue = existingClassNameAttribute.value
         if (classNameAttrValue?.type !== 'StringLiteral') {
+          cWarn(
+            'removeClass: className attribute is not a string literal, but rather a',
+            classNameAttrValue?.type,
+          )
           return
         }
 
@@ -324,16 +344,13 @@ function ImpulseApp() {
         )
       },
       await getDirHandle({ mode: 'readwrite' }),
+      { preferAncestor: 'none' },
     )
 
     if (transformResult.type === 'error') {
       return
     }
 
-    selectedElement.classList.remove(classNameToRemove)
-    if (selectedElement.classList.length === 0) {
-      selectedElement.removeAttribute('class')
-    }
     await writeTransformationResultToFile(transformResult)
   }
 
@@ -378,6 +395,7 @@ function ImpulseApp() {
         attributes.push(className)
       },
       await getDirHandle({ mode: 'readwrite' }),
+      { preferAncestor: 'none' },
     )
 
     if (transformResult.type === 'error') {
@@ -440,15 +458,6 @@ function ImpulseApp() {
     }
 
     await writeTransformationResultToFile(transformResult)
-
-    await waitForAnyNodeMutation(selectedElement)
-
-    if (
-      selectedElement.previousSibling &&
-      selectedElement.previousSibling.parentElement
-    ) {
-      setSelectedElement(selectedElement.previousSibling)
-    }
   }
 
   const insertAfterNode = async (
@@ -496,7 +505,9 @@ function ImpulseApp() {
 
     await waitForAnyNodeMutation(selectedElement)
 
-    setSelectedElement(selectedElement.lastChild!)
+    if (selectedElement.lastChild) {
+      setSelectedElement(selectedElement.lastChild)
+    }
   }
 
   const changeTag = async (
@@ -1037,14 +1048,6 @@ function ImpulseApp() {
           />
         </>
       )}
-      <KBarPortal>
-        <KBarPositioner className="impulse-styles" style={{ zIndex: 100100 }}>
-          <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
-            <KBarSearch className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0" />
-            <RenderResults />
-          </KBarAnimator>
-        </KBarPositioner>
-      </KBarPortal>
     </div>
     // </ImpulseAppContext.Provider>
   )

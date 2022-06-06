@@ -57,7 +57,7 @@ export function transformCode(
       },
     }
   } catch (e) {
-    console.warn('code transformation error', e)
+    warn('code transformation error', e)
     return { type: 'error', error: e as Error }
   }
 }
@@ -76,16 +76,16 @@ export async function transformNodeInCode<T extends Node, R>(
   ) => R,
   dirHandle: FileSystemDirectoryHandle,
   options?: {
-    preferAncestor?: 'parent' | 'owner'
+    preferAncestor?: 'parent' | 'owner' | 'none'
   },
 ): Promise<TransformNodeResultSuccess<R> | { type: 'error' }> {
   const preferAncestor = options?.preferAncestor ?? 'parent'
-  const cTrace = (...messages: any) => {
-    return trace('transformNodeInCode', ...messages)
+  const сWarn = (...messages: any) => {
+    return warn('transformNodeInCode', ...messages)
   }
   domNode.__impulseDirty = true
   if (!domNode.parentElement) {
-    cTrace('domNode.parentElement is null')
+    сWarn('domNode.parentElement is null')
     return { type: 'error' }
   }
 
@@ -103,12 +103,13 @@ export async function transformNodeInCode<T extends Node, R>(
     elementGetOwnerWithSource(domNode.parentElement)?._debugSource?.fileName
 
   if (!fileSrc) {
+    сWarn('could not detect the file source path')
     return { type: 'error' }
   }
 
   const file = await fsGetFileContents(dirHandle, fileSrc)
   if (!file) {
-    cTrace('could not open file', fileSrc)
+    сWarn('could not open file', fileSrc)
     return { type: 'error' }
   }
 
@@ -119,6 +120,12 @@ export async function transformNodeInCode<T extends Node, R>(
   const isSourceJsxNode = (path: NodePath<JSXNode>) => {
     // regular JSXElement: rely on its fiber's source
     if (domNode instanceof HTMLElement) {
+      if (preferAncestor === 'none') {
+        return (
+          source && path.isJSXElement() && isSourceJsxElement(path.node, source)
+        )
+      }
+
       const isExternalComponent = !source && fiber?._debugOwner
       if (isExternalComponent || preferAncestor === 'owner') {
         return (
@@ -270,24 +277,20 @@ export async function transformNodeInCode<T extends Node, R>(
 
     const targetJsxNode = findNodeAmongJsxChildren(domNode, parentPath.node)
 
-    if (targetJsxNode === path.node) {
-      cTrace('source element found, text node inside tag', path.node)
-    }
-
     return targetJsxNode === path.node
   }
 
-  let visiorHasBeenCalled = false
+  let visitorHasBeenCalled = false
   let visitorResult: undefined | R = undefined
   const visitorOnce = (
     path: NodePath<T extends HTMLElement ? t.JSXElement : JSXNode>,
   ) => {
-    if (visiorHasBeenCalled) {
-      console.warn('mathched more than one node', domNode, path)
+    if (visitorHasBeenCalled) {
+      warn('mathched more than one node', domNode, path)
       return visitorResult
     }
 
-    visiorHasBeenCalled = true
+    visitorHasBeenCalled = true
 
     return visitor(path)
   }
@@ -345,7 +348,11 @@ export async function transformNodeInCode<T extends Node, R>(
   )
 
   if (transformResult.type === 'error') {
-    return {type: 'error'}
+    return { type: 'error' }
+  }
+
+  if (!visitorHasBeenCalled) {
+    warn('no node matched', domNode)
   }
 
   return {
