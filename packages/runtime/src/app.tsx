@@ -621,7 +621,7 @@ function ImpulseApp() {
         jumpToComponentCall(selectionState.selectedNode),
     },
     removeElement: {
-      showIf: selectionState.type === 'elementSelected',
+      showIf: selectionState.type === 'elementSelected' && !'turn off because it is dangerous',
       name: 'Remove element',
       shortcut: ['d', 'd'],
       section: sections.general,
