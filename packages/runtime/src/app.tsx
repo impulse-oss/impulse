@@ -692,7 +692,7 @@ function ImpulseApp(props: ImpulseParams) {
     insertDivAfter: {
       showIf: selectionState.type === 'elementSelected',
       name: 'Insert after: <div>',
-      shortcut: ['KeyI', 'KeyB'],
+      shortcut: ['KeyI', 'KeyA'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
