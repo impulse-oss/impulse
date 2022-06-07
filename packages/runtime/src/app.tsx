@@ -133,15 +133,9 @@ function ImpulseApp() {
     const { parentElement, indexInsideParent } = selectionState
     const children = [...parentElement.childNodes]
 
-    const siblingSameSpot = children[indexInsideParent] as
-      | Element
-      | undefined
-    const siblingBefore = children[indexInsideParent - 1] as
-      | Element
-      | undefined
-    const siblingAfter = children[indexInsideParent + 1] as
-      | Element
-      | undefined
+    const siblingSameSpot = children[indexInsideParent] as Element | undefined
+    const siblingBefore = children[indexInsideParent - 1] as Element | undefined
+    const siblingAfter = children[indexInsideParent + 1] as Element | undefined
 
     if (siblingSameSpot && !siblingSameSpot.__impulseHide) {
       setSelectedElement(siblingSameSpot)
@@ -354,10 +348,7 @@ function ImpulseApp() {
     await writeTransformationResultToFile(transformResult)
   }
 
-  const addClass = async (
-    selectedElement: Element,
-    classNameToAdd: string,
-  ) => {
+  const addClass = async (selectedElement: Element, classNameToAdd: string) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       ({ node }) => {
@@ -748,10 +739,7 @@ function ImpulseApp() {
               section: sections.removeClass,
               perform: () =>
                 selectionState.type === 'elementSelected' &&
-                removeClass(
-                  selectionState.selectedNode as Element,
-                  className,
-                ),
+                removeClass(selectionState.selectedNode as Element, className),
             },
           ]),
         )
@@ -763,9 +751,7 @@ function ImpulseApp() {
             .filter(
               (tagName) =>
                 tagName !==
-                (
-                  selectionState.selectedNode as Element
-                ).tagName.toLowerCase(),
+                (selectionState.selectedNode as Element).tagName.toLowerCase(),
             )
             .map((tagName) => [
               `changeTag-${tagName}`,
@@ -775,10 +761,7 @@ function ImpulseApp() {
                 section: sections.changeTag,
                 perform: () =>
                   selectionState.type === 'elementSelected' &&
-                  changeTag(
-                    selectionState.selectedNode as Element,
-                    tagName,
-                  ),
+                  changeTag(selectionState.selectedNode as Element, tagName),
               },
             ]),
         )
@@ -964,7 +947,7 @@ function ImpulseApp() {
     }
 
     animatedScrollTo(selectionState.selectedNode, {
-      verticalOffset: -100,
+      verticalOffset: -150,
     })
   }, [selectionState])
 
