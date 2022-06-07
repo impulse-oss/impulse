@@ -72,7 +72,7 @@ export type TransformNodeResultSuccess<R> = {
 export async function transformNodeInCode<T extends Node, R>(
   domNode: T,
   visitor: (
-    path: NodePath<T extends HTMLElement ? t.JSXElement : JSXNode>,
+    path: NodePath<T extends Element ? t.JSXElement : JSXNode>,
   ) => R,
   dirHandle: FileSystemDirectoryHandle,
   options?: {
@@ -92,15 +92,21 @@ export async function transformNodeInCode<T extends Node, R>(
   const fiber = getReactFiber(domNode)
   const source = fiber?._debugSource
   const parentFiber = fiber?.return
+  const isExternalComponent = !source && fiber?._debugOwner
+  const shouldLookForOwner = isExternalComponent || preferAncestor === 'owner'
 
   const parentElementFiber = getReactFiber(domNode.parentElement)
   const parentElementSource = parentElementFiber?._debugSource
 
-  const fileSrc =
-    source?.fileName ??
-    parentElementSource?.fileName ??
+  const targetNodeFileName = source?.fileName ?? parentElementSource?.fileName
+
+  const ownerFileName =
     elementGetOwnerWithSource(domNode)?._debugSource?.fileName ??
     elementGetOwnerWithSource(domNode.parentElement)?._debugSource?.fileName
+
+  const fileSrc = shouldLookForOwner
+    ? ownerFileName
+    : targetNodeFileName ?? ownerFileName
 
   if (!fileSrc) {
     сWarn('could not detect the file source path')
@@ -119,15 +125,14 @@ export async function transformNodeInCode<T extends Node, R>(
 
   const isSourceJsxNode = (path: NodePath<JSXNode>) => {
     // regular JSXElement: rely on its fiber's source
-    if (domNode instanceof HTMLElement) {
+    if (domNode instanceof Element) {
       if (preferAncestor === 'none') {
         return (
           source && path.isJSXElement() && isSourceJsxElement(path.node, source)
         )
       }
 
-      const isExternalComponent = !source && fiber?._debugOwner
-      if (isExternalComponent || preferAncestor === 'owner') {
+      if (shouldLookForOwner) {
         return (
           ownerWithSource?._debugSource &&
           path.isJSXElement() &&
@@ -141,7 +146,7 @@ export async function transformNodeInCode<T extends Node, R>(
     }
 
     // text node is the only child - and it doesn't have a fiber
-    if (!(domNode instanceof HTMLElement) && !fiber && parentElementFiber) {
+    if (!(domNode instanceof Element) && !fiber && parentElementFiber) {
       if (!path.parentPath.isJSXElement()) {
         return false
       }
@@ -197,7 +202,7 @@ export async function transformNodeInCode<T extends Node, R>(
       const fiberSiblings = fiberGetSiblings(fiber)
 
       const fiberElementSibling = fiberSiblings.find(
-        (fiber) => fiber.stateNode instanceof HTMLElement,
+        (fiber) => fiber.stateNode instanceof Element,
       )
 
       if (fiberElementSibling) {
@@ -283,7 +288,7 @@ export async function transformNodeInCode<T extends Node, R>(
   let visitorHasBeenCalled = false
   let visitorResult: undefined | R = undefined
   const visitorOnce = (
-    path: NodePath<T extends HTMLElement ? t.JSXElement : JSXNode>,
+    path: NodePath<T extends Element ? t.JSXElement : JSXNode>,
   ) => {
     if (visitorHasBeenCalled) {
       warn('mathched more than one node', domNode, path)
@@ -297,7 +302,7 @@ export async function transformNodeInCode<T extends Node, R>(
 
   const transformResult = transformCode(
     file.text,
-    domNode instanceof HTMLElement
+    domNode instanceof Element
       ? {
           JSXElement: (path) => {
             if (!isSourceJsxNode(path)) {

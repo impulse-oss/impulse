@@ -77,7 +77,7 @@ export function ImpulseRoot() {
 }
 
 const ImpulseAppContext = createContext<{
-  selectedElement: HTMLElement | null
+  selectedElement: Element | null
   __rerenderValue: number
   rerender: () => void
 }>({ __rerenderValue: 0, selectedElement: null, rerender: () => {} })
@@ -86,7 +86,7 @@ type SelectionState =
   | {
       type: 'elementSelected'
       selectedNode: Node
-      parentElement: HTMLElement
+      parentElement: Element
       indexInsideParent: number
     }
   | {
@@ -134,13 +134,13 @@ function ImpulseApp() {
     const children = [...parentElement.childNodes]
 
     const siblingSameSpot = children[indexInsideParent] as
-      | HTMLElement
+      | Element
       | undefined
     const siblingBefore = children[indexInsideParent - 1] as
-      | HTMLElement
+      | Element
       | undefined
     const siblingAfter = children[indexInsideParent + 1] as
-      | HTMLElement
+      | Element
       | undefined
 
     if (siblingSameSpot && !siblingSameSpot.__impulseHide) {
@@ -229,7 +229,7 @@ function ImpulseApp() {
     const fiber = getReactFiber(selectedNode)
     const source = fiber?._debugSource
 
-    if (selectedNode instanceof HTMLElement && source) {
+    if (selectedNode instanceof Element && source) {
       const vscodeLink = makeVscodeLink(source)
       window.open(vscodeLink)
       return
@@ -270,7 +270,7 @@ function ImpulseApp() {
 
   const jumpToComponentCall = (selectedNode: Node) => {
     const source = (() => {
-      if (selectedNode instanceof HTMLElement) {
+      if (selectedNode instanceof Element) {
         return elementGetOwnerWithSource(selectedNode)?._debugSource
       }
 
@@ -292,7 +292,7 @@ function ImpulseApp() {
   }
 
   const removeClass = async (
-    selectedElement: HTMLElement,
+    selectedElement: Element,
     classNameToRemove: string,
   ) => {
     const transformResult = await transformNodeInCode(
@@ -355,7 +355,7 @@ function ImpulseApp() {
   }
 
   const addClass = async (
-    selectedElement: HTMLElement,
+    selectedElement: Element,
     classNameToAdd: string,
   ) => {
     const transformResult = await transformNodeInCode(
@@ -486,7 +486,7 @@ function ImpulseApp() {
   }
 
   const insertChild = async (
-    selectedElement: HTMLElement,
+    selectedElement: Element,
     jsxNodeToInsert: JSXNode,
   ) => {
     const transformResult = await transformNodeInCode(
@@ -511,7 +511,7 @@ function ImpulseApp() {
   }
 
   const changeTag = async (
-    selectedElement: HTMLElement,
+    selectedElement: Element,
     newTagName: typeof htmlTags[0],
   ) => {
     const transformResult = await transformNodeInCode(
@@ -620,7 +620,7 @@ function ImpulseApp() {
     jumpToCode: {
       showIf: selectionState.type === 'elementSelected',
       name: 'Jump to code',
-      shortcut: ['c'],
+      shortcut: ['KeyC'],
       keywords: 'jump code',
       section: sections.general,
       perform: () =>
@@ -630,7 +630,7 @@ function ImpulseApp() {
     jumpToCodeCall: {
       showIf: selectionState.type === 'elementSelected',
       name: 'Jump to component call',
-      shortcut: ['Shift+c'],
+      shortcut: ['Shift+KeyC'],
       keywords: 'jump component call',
       section: sections.general,
       perform: () =>
@@ -642,7 +642,7 @@ function ImpulseApp() {
         selectionState.type === 'elementSelected' &&
         !'turn off because it is dangerous',
       name: 'Remove element',
-      shortcut: ['d', 'd'],
+      shortcut: ['KeyD', 'KeyD'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
@@ -653,7 +653,7 @@ function ImpulseApp() {
         selectionState.type === 'elementSelected' &&
         !!selectionState.selectedNode.previousSibling,
       name: 'Move up',
-      shortcut: ['Shift+k'],
+      shortcut: ['Shift+KeyK'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
@@ -664,7 +664,7 @@ function ImpulseApp() {
         selectionState.type === 'elementSelected' &&
         !!selectionState.selectedNode.nextSibling,
       name: 'Move down',
-      shortcut: ['Shift+j'],
+      shortcut: ['Shift+KeyJ'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
@@ -673,7 +673,7 @@ function ImpulseApp() {
     insertDivBefore: {
       showIf: selectionState.type === 'elementSelected',
       name: 'Insert before: <div>',
-      shortcut: ['i', 'b'],
+      shortcut: ['KeyI', 'KeyB'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
@@ -689,7 +689,7 @@ function ImpulseApp() {
     insertDivAfter: {
       showIf: selectionState.type === 'elementSelected',
       name: 'Insert after: <div>',
-      shortcut: ['i', 'a'],
+      shortcut: ['KeyI', 'KeyB'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
@@ -705,14 +705,14 @@ function ImpulseApp() {
     insertDivChild: {
       showIf:
         selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof HTMLElement,
+        selectionState.selectedNode instanceof Element,
       name: 'Insert child: <div>',
-      shortcut: ['i', 'i'],
+      shortcut: ['KeyI', 'KeyI'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
         insertChild(
-          selectionState.selectedNode as HTMLElement,
+          selectionState.selectedNode as Element,
           t.jsxElement(
             t.jsxOpeningElement(t.jsxIdentifier('div'), []),
             t.jsxClosingElement(t.jsxIdentifier('div')),
@@ -725,7 +725,7 @@ function ImpulseApp() {
         selectionState.type === 'elementSelected' &&
         searchQuery !== '' &&
         searchQuery.split(' ').length === 1 &&
-        selectionState.selectedNode instanceof HTMLElement,
+        selectionState.selectedNode instanceof Element,
       name: `> ${searchQuery}`,
       shortcut: [],
       section: {
@@ -734,11 +734,11 @@ function ImpulseApp() {
       },
       perform: () => {
         selectionState.type === 'elementSelected' &&
-          addClass(selectionState.selectedNode as HTMLElement, searchQuery)
+          addClass(selectionState.selectedNode as Element, searchQuery)
       },
     },
     ...(selectionState.type === 'elementSelected' &&
-    selectionState.selectedNode instanceof HTMLElement
+    selectionState.selectedNode instanceof Element
       ? Object.fromEntries(
           Array.from(selectionState.selectedNode.classList).map((className) => [
             `removeClass-${className}`,
@@ -749,7 +749,7 @@ function ImpulseApp() {
               perform: () =>
                 selectionState.type === 'elementSelected' &&
                 removeClass(
-                  selectionState.selectedNode as HTMLElement,
+                  selectionState.selectedNode as Element,
                   className,
                 ),
             },
@@ -757,14 +757,14 @@ function ImpulseApp() {
         )
       : {}),
     ...(selectionState.type === 'elementSelected' &&
-    selectionState.selectedNode instanceof HTMLElement
+    selectionState.selectedNode instanceof Element
       ? Object.fromEntries(
           htmlTags
             .filter(
               (tagName) =>
                 tagName !==
                 (
-                  selectionState.selectedNode as HTMLElement
+                  selectionState.selectedNode as Element
                 ).tagName.toLowerCase(),
             )
             .map((tagName) => [
@@ -776,7 +776,7 @@ function ImpulseApp() {
                 perform: () =>
                   selectionState.type === 'elementSelected' &&
                   changeTag(
-                    selectionState.selectedNode as HTMLElement,
+                    selectionState.selectedNode as Element,
                     tagName,
                   ),
               },
@@ -805,14 +805,14 @@ function ImpulseApp() {
       showIf:
         searchQuery !== '' &&
         selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof HTMLElement,
+        selectionState.selectedNode instanceof Element,
       section: sections.insertText,
       name: `Insert child: ${searchQuery}`,
       shortcut: [],
       perform: () =>
         selectionState.type === 'elementSelected' &&
         insertChild(
-          selectionState.selectedNode as HTMLElement,
+          selectionState.selectedNode as Element,
           t.jsxText(searchQuery),
         ),
     },
@@ -959,7 +959,7 @@ function ImpulseApp() {
       return
     }
 
-    if (!(selectionState.selectedNode instanceof HTMLElement)) {
+    if (!(selectionState.selectedNode instanceof Element)) {
       return
     }
 
@@ -970,7 +970,7 @@ function ImpulseApp() {
 
   useEffect(() => {
     ;(window as any).$_impulseTest = async (rootNode: Node) => {
-      if (rootNode instanceof HTMLElement && rootNode.id === 'impulse-root') {
+      if (rootNode instanceof Element && rootNode.id === 'impulse-root') {
         return
       }
 
@@ -997,12 +997,12 @@ function ImpulseApp() {
       if (
         transformResult.type === 'success' &&
         transformResult.visitorResult &&
-        !(rootNode instanceof HTMLElement)
+        !(rootNode instanceof Element)
       ) {
         // console.log('Running test for', rootNode, transformResult.visitorResult)
       }
 
-      if (rootNode instanceof HTMLElement) {
+      if (rootNode instanceof Element) {
         ;[...rootNode.childNodes].map((window as any).$_impulseTest)
       }
     }
@@ -1069,13 +1069,20 @@ function RenderResults() {
             }`}
           >
             <div>{item.name}</div>
-            {item.shortcut?.length ? (
-              <div className="uppercase font-mono bg-[#d9d9d9] py-1 px-2 rounded-md text-xs">
-                {item.shortcut}
-              </div>
-            ) : (
-              <div></div>
-            )}
+            <div className="flex gap-1">
+              {item.shortcut &&
+                item.shortcut.length > 0 &&
+                item.shortcut.map((key, idx) => {
+                  return (
+                    <span
+                      key={key + idx}
+                      className="uppercase font-mono bg-[#d9d9d9] py-1 px-2 rounded-md text-xs"
+                    >
+                      {key.replace('Key', '')}
+                    </span>
+                  )
+                })}
+            </div>
           </div>
         )
       }

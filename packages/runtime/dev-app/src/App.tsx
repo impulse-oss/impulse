@@ -30,7 +30,7 @@ function App() {
         <Section title="Loop + Fragment + Text/span">
           {new Array(2).fill(0).map((_, i) => (
             <Fragment key={i}>
-              Hello Vite + <span>React!</span>
+              FIXME: move Hello Vite + <span>React!</span>
               <br />
             </Fragment>
           ))}
@@ -60,6 +60,7 @@ function App() {
               href="https://reactjs.org"
               target="_blank"
               rel="noopener noreferrer"
+              className="underline"
             >
               Learn React
             </a>
@@ -69,12 +70,13 @@ function App() {
               href="https://vitejs.dev/guide/features.html"
               target="_blank"
               rel="noopener noreferrer"
+              className="underline"
             >
               Vite Docs
             </a>
           </p>
         </Section>
-        I'm just a text FIXME
+        I'm just a text
         <br />
         {['text', 'generated', 'from', 'join'].join('\n')}
         <span>Single text child in a span</span>
@@ -96,6 +98,10 @@ function App() {
             {'expression1'} {'expression2'}
           </div>
         </Section>
+        <Section title="Div + Component on the same level">
+          <LargeText />
+          <div>div text</div>
+        </Section>
       </header>
     </div>
   )
@@ -114,9 +120,13 @@ function ComponentFragment() {
   return (
     <>
       <div>element 1</div>
-      element 2 <div>element 3</div>
+      element 2<div>element 3</div>
     </>
   )
+}
+
+function LargeText() {
+  return <span className="text-xl">some text</span>
 }
 
 export default App

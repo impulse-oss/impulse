@@ -137,7 +137,7 @@ function ElementDetails(props: { node: Node }) {
     return str.substring(0, maxLength) + '...'
   }
 
-  if (!(node instanceof HTMLElement)) {
+  if (!(node instanceof HTMLElement) && !(node instanceof SVGElement)) {
     const text = node.textContent || '<empty string>'
     return <>"{truncate(text, 50)}"</>
   }
