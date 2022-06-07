@@ -136,6 +136,31 @@ export async function detectRootPath(
   return fullPath.replace(validPath, '')
 }
 
+export async function findClosestFile(
+  dirHandle: FileSystemDirectoryHandle,
+  closestTo: string,
+  fileNameCandidates: string[],
+): Promise<OpenFile | null> {
+  const pathChunks = closestTo.split('/')
+
+  const currentDir = pathChunks.slice(0, -1).join('/')
+
+  for (const fileName of fileNameCandidates) {
+    const candidateFullPath = `${currentDir}/${fileName}`
+    const file = await fsGetFileContents(dirHandle, candidateFullPath)
+    if (file) {
+      return file
+    }
+  }
+
+  if (currentDir === '/') {
+    return null
+  }
+
+  return findClosestFile(dirHandle, currentDir, fileNameCandidates)
+
+}
+
 export function fileToText(file: File): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader()

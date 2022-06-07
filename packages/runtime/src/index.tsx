@@ -1,8 +1,8 @@
 import ReactDOM from 'react-dom/client'
 import './styles.css'
-import { ImpulseRoot } from './app'
+import { ImpulseParams, ImpulseRoot } from './app'
 
-export function mountApp() {
+export function mountApp(params?: ImpulseParams) {
   if (typeof window === 'undefined') {
     return
   }
@@ -12,5 +12,5 @@ export function mountApp() {
   document.body.appendChild(rootElement)
 
   const root = ReactDOM.createRoot(rootElement)
-  root.render(<ImpulseRoot />)
+  root.render(<ImpulseRoot {...params} />)
 }

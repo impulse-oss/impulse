@@ -50,7 +50,7 @@ declare global {
   }
 }
 
-export function ImpulseRoot() {
+export function ImpulseRoot(props: ImpulseParams) {
   return (
     <div
       id="impulse-root"
@@ -62,7 +62,7 @@ export function ImpulseRoot() {
       }}
     >
       <KBarProvider options={{ disableScrollbarManagement: true }}>
-        <ImpulseApp />
+        <ImpulseApp {...props} />
         <KBarPortal>
           <KBarPositioner className="impulse-styles" style={{ zIndex: 100100 }}>
             <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
@@ -93,7 +93,12 @@ type SelectionState =
       type: 'elementNotSelected'
     }
 
-function ImpulseApp() {
+export type ImpulseParams = {
+  prettierConfig?: any
+  config?: {}
+}
+
+function ImpulseApp(props: ImpulseParams) {
   const [selectionState, setSelectionState] = useState<SelectionState>({
     type: 'elementNotSelected',
   })
@@ -235,6 +240,7 @@ function ImpulseApp() {
         return path.node
       },
       await getDirHandle({ mode: 'read' }),
+      { prettierConfig: props.prettierConfig },
     )
 
     if (transformResult.type === 'error') {
@@ -338,7 +344,7 @@ function ImpulseApp() {
         )
       },
       await getDirHandle({ mode: 'readwrite' }),
-      { preferAncestor: 'none' },
+      { preferAncestor: 'none', prettierConfig: props.prettierConfig },
     )
 
     if (transformResult.type === 'error') {
@@ -386,7 +392,7 @@ function ImpulseApp() {
         attributes.push(className)
       },
       await getDirHandle({ mode: 'readwrite' }),
-      { preferAncestor: 'none' },
+      { preferAncestor: 'none', prettierConfig: props.prettierConfig },
     )
 
     if (transformResult.type === 'error') {
@@ -404,6 +410,7 @@ function ImpulseApp() {
         path.remove()
       },
       await getDirHandle({ mode: 'readwrite' }),
+      { prettierConfig: props.prettierConfig },
     )
 
     if (transformResult.type === 'error') {
@@ -442,6 +449,7 @@ function ImpulseApp() {
         path.insertBefore(jsxNodeToInsert)
       },
       await getDirHandle({ mode: 'readwrite' }),
+      { prettierConfig: props.prettierConfig },
     )
 
     if (transformResult.type === 'error') {
@@ -461,6 +469,7 @@ function ImpulseApp() {
         path.insertAfter(jsxNodeToInsert)
       },
       await getDirHandle({ mode: 'readwrite' }),
+      { prettierConfig: props.prettierConfig },
     )
 
     if (transformResult.type === 'error') {
@@ -486,6 +495,7 @@ function ImpulseApp() {
         path.node.children.push(jsxNodeToInsert)
       },
       await getDirHandle({ mode: 'readwrite' }),
+      { prettierConfig: props.prettierConfig },
     )
 
     if (transformResult.type === 'error') {
@@ -518,6 +528,7 @@ function ImpulseApp() {
         }
       },
       await getDirHandle({ mode: 'readwrite' }),
+      { prettierConfig: props.prettierConfig },
     )
 
     if (transformResult.type === 'error') {
@@ -558,6 +569,7 @@ function ImpulseApp() {
         preferAncestor: nodeIsComponentRoot(selectedElement)
           ? 'owner'
           : 'parent',
+        prettierConfig: props.prettierConfig,
       },
     )
 
@@ -963,6 +975,7 @@ function ImpulseApp() {
           return path.node
         },
         await getDirHandle({ mode: 'read' }),
+        { prettierConfig: props.prettierConfig },
       )
 
       if (transformResult.type === 'error') {

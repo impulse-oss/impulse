@@ -1,10 +1,11 @@
 import { BabelFileResult } from '@babel/core'
 import { transform } from '@babel/standalone'
-import { NodePath, TraverseOptions } from '@babel/traverse'
+import type { NodePath, TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
+import { dirname } from 'path'
 import prettier from 'prettier'
 import parserBabel from 'prettier/parser-babel'
-import { fsGetFileContents, fsWriteToFile, OpenFile } from './fs'
+import { findClosestFile, fsGetFileContents, fsWriteToFile, OpenFile } from './fs'
 import { trace, warn } from './logger'
 import {
   elementGetOwnerWithSource,
@@ -31,7 +32,7 @@ export function transformCode(
   visitor: TraverseOptions,
 ): TransformResult {
   try {
-    const transformResult = transform(inputCode, {
+    const babelResult = transform(inputCode, {
       plugins: [{ visitor }],
       parserOpts: {
         sourceType: 'unambiguous',
@@ -46,15 +47,7 @@ export function transformCode(
 
     return {
       type: 'success',
-      babelResult: {
-        ...transformResult,
-        code: transformResult.code
-          ? prettier.format(transformResult.code, {
-              parser: 'babel-ts',
-              plugins: [parserBabel],
-            })
-          : transformResult.code,
-      },
+      babelResult,
     }
   } catch (e) {
     warn('code transformation error', e)
@@ -77,6 +70,7 @@ export async function transformNodeInCode<T extends Node, R>(
   dirHandle: FileSystemDirectoryHandle,
   options?: {
     preferAncestor?: 'parent' | 'owner' | 'none'
+    prettierConfig?: prettier.Options
   },
 ): Promise<TransformNodeResultSuccess<R> | { type: 'error' }> {
   const preferAncestor = options?.preferAncestor ?? 'parent'
@@ -359,11 +353,22 @@ export async function transformNodeInCode<T extends Node, R>(
   if (!visitorHasBeenCalled) {
     warn('no node matched', domNode)
   }
+  
+  // const prettierConfig = await findClosestFile(dirHandle, fileSrc, ['.prettierrc.js'])
+  // console.log('prettierConfig', prettierConfig);
+  const prettierConfig = options?.prettierConfig
+
+  debugger
+  const formattedCode = prettier.format(transformResult.babelResult.code!, {
+    ...prettierConfig,
+    parser: 'babel-ts',
+    plugins: [parserBabel],
+  })
 
   return {
     type: 'success',
     file,
-    code: transformResult.babelResult.code!,
+    code: formattedCode,
     visitorResult,
   }
 }

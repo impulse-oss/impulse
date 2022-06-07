@@ -3,13 +3,23 @@ import logo from './logo.svg'
 import { ImpulseRoot } from '../../src/app'
 import '../../dist/style.css'
 import { Alert } from '@mui/material'
+import { RedText } from './red-text'
 
 function App() {
   const [count, setCount] = useState(0)
 
   return (
     <div className="App">
-      <ImpulseRoot />
+      <ImpulseRoot
+        prettierConfig={{
+          semi: false,
+          trailingComma: 'all',
+          singleQuote: true,
+          printWidth: 80,
+          tabWidth: 2,
+        }}
+      />
+
       <header className="grid grid-cols-2 gap-4 p-8">
         <Section title="Image">
           <img src={logo} alt="logo" className="w-40" />
@@ -101,6 +111,9 @@ function App() {
         <Section title="Div + Component on the same level">
           <LargeText />
           <div>div text</div>
+        </Section>
+        <Section title="Imported component">
+          <RedText>Foobar FIXME jump to code</RedText>
         </Section>
       </header>
     </div>
