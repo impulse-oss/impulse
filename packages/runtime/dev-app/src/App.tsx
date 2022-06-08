@@ -4,6 +4,8 @@ import { ImpulseRoot } from '../../src/app'
 import '../../dist/style.css'
 import { Alert } from '@mui/material'
 import { RedText } from './red-text'
+import headerImgUrl from '../header.png'
+import vegIconUrl from '../veg.png'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -140,6 +142,59 @@ function ComponentFragment() {
 
 function LargeText() {
   return <span className="text-xl">some text</span>
+}
+
+function RestaurantPage() {
+  return (
+    <div className="bg-[#e5e5e5]">
+      <div className="w-[375px] mx-auto min-h-screen bg-white">
+        <div
+          className="h-40 p-5"
+          style={{ backgroundImage: `url(${headerImgUrl})` }}
+        >
+          <div className="h-10 w-10 bg-white rounded-full flex justify-center items-center">
+            <div className="w-1/2 flex flex-col justify-between h-[38%]">
+              <div className="border border-black rounded-full"></div>
+              <div className="border border-black rounded-full"></div>
+              <div className="border border-black rounded-full"></div>
+            </div>
+          </div>
+        </div>
+        <h1 className="font-bold text-2xl px-5 py-4">ChaCha</h1>
+        <div className="py-4 px-5 bg-[#CCFFCB]">
+          <div className="text-lg font-medium">
+            Do you have food preferences?
+          </div>
+          <div className="flex gap-4 mt-2">
+            <div className="text-center">
+              <div>
+                <div className="w-[72px] h-[72px] border-[#AFAFAF] rounded-full border-4 flex p-2">
+                  <img src={vegIconUrl} alt="vegeterian icon" />
+                </div>
+              </div>
+              <span className="text-sm">Vegetarian</span>
+            </div>
+
+            <div className="leading-tight">
+              Specify what you like or are allergic to, and we'll narrow down
+              the menu to the ones that suit you best
+            </div>
+          </div>
+          <button className="mt-2 w-full bg-[#319C2F] text-white py-3 text-lg font-bold rounded-lg">
+            Adapt the Menu
+          </button>
+        </div>
+        <div className="mt-6 h-12 bg-[#dadada] flex px-5 pt-2">
+          <div className="grow shrink-0 basis-0 flex justify-center items-center">
+            OnSiteOrder
+          </div>
+          <div className="bg-white rounded-t-lg grow shrink-0 basis-0 text-center flex justify-center items-center">
+            Delivery
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default App

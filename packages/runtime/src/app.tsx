@@ -61,12 +61,20 @@ export function ImpulseRoot(props: ImpulseParams) {
         left: 0,
       }}
     >
-      <KBarProvider options={{ disableScrollbarManagement: true }}>
+      <KBarProvider
+        options={{
+          disableScrollbarManagement: true,
+          toggleShortcut: 'none! it is handled by our code',
+        }}
+      >
         <ImpulseApp {...props} />
         <KBarPortal>
           <KBarPositioner className="impulse-styles" style={{ zIndex: 100100 }}>
             <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
-              <KBarSearch className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0" />
+              <KBarSearch
+                className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0"
+                defaultPlaceholder="Start typing..."
+              />
               <RenderResults />
             </KBarAnimator>
           </KBarPositioner>
@@ -162,7 +170,11 @@ function ImpulseApp(props: ImpulseParams) {
     setSelectedElement(parentElement)
   }
 
-  const { currentRootActionId, searchQuery } = useKBar((state) => {
+  const {
+    currentRootActionId,
+    searchQuery,
+    query: kbarQuery,
+  } = useKBar((state) => {
     return {
       currentRootActionId: state.currentRootActionId,
       searchQuery: state.searchQuery,
@@ -410,7 +422,12 @@ function ImpulseApp(props: ImpulseParams) {
         path.remove()
       },
       await getDirHandle({ mode: 'readwrite' }),
-      { prettierConfig: props.prettierConfig },
+      {
+        prettierConfig: props.prettierConfig,
+        preferAncestor: nodeIsComponentRoot(selectedElement)
+          ? 'owner'
+          : 'parent',
+      },
     )
 
     if (transformResult.type === 'error') {
@@ -422,21 +439,21 @@ function ImpulseApp(props: ImpulseParams) {
       return
     }
 
-    const oldDisplay = selectedElement.style.display
+    // const oldDisplay = selectedElement.style.display
 
-    selectedElement.__impulseHide = true
-    selectedElement.style.display = 'none'
-    onSelectedElementRemoved()
+    // selectedElement.__impulseHide = true
+    // selectedElement.style.display = 'none'
+    // onSelectedElementRemoved()
 
     await writeTransformationResultToFile(transformResult)
 
     await waitForAnyNodeMutation(selectedElement)
 
-    selectedElement.style.display = oldDisplay
-    if (selectedElement.getAttribute('style') === '') {
-      selectedElement.removeAttribute('style')
-    }
-    selectedElement.__impulseHide = false
+    // selectedElement.style.display = oldDisplay
+    // if (selectedElement.getAttribute('style') === '') {
+    //   selectedElement.removeAttribute('style')
+    // }
+    // selectedElement.__impulseHide = false
   }
 
   const insertBeforeNode = async (
@@ -641,14 +658,13 @@ function ImpulseApp(props: ImpulseParams) {
         jumpToComponentCall(selectionState.selectedNode),
     },
     removeElement: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        !'turn off because it is dangerous',
+      showIf: selectionState.type === 'elementSelected',
       name: 'Remove element',
       shortcut: ['KeyD', 'KeyD'],
       section: sections.general,
       perform: () =>
         selectionState.type === 'elementSelected' &&
+        window.confirm('Are use sure? This action is irreversible!') &&
         removeNode(selectionState.selectedNode),
     },
     moveUp: {
@@ -778,6 +794,21 @@ function ImpulseApp(props: ImpulseParams) {
             ]),
         )
       : {}),
+    insertTextChild: {
+      showIf:
+        searchQuery !== '' &&
+        selectionState.type === 'elementSelected' &&
+        selectionState.selectedNode instanceof Element,
+      section: sections.insertText,
+      name: `Insert child: ${searchQuery}`,
+      shortcut: [],
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertChild(
+          selectionState.selectedNode as Element,
+          t.jsxText(searchQuery),
+        ),
+    },
     insertTextBefore: {
       showIf: selectionState.type === 'elementSelected' && searchQuery !== '',
       section: sections.insertText,
@@ -795,21 +826,6 @@ function ImpulseApp(props: ImpulseParams) {
       perform: () =>
         selectionState.type === 'elementSelected' &&
         insertAfterNode(selectionState.selectedNode, t.jsxText(searchQuery)),
-    },
-    insertTextChild: {
-      showIf:
-        searchQuery !== '' &&
-        selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof Element,
-      section: sections.insertText,
-      name: `Insert child: ${searchQuery}`,
-      shortcut: [],
-      perform: () =>
-        selectionState.type === 'elementSelected' &&
-        insertChild(
-          selectionState.selectedNode as Element,
-          t.jsxText(searchQuery),
-        ),
     },
   }
 
@@ -925,6 +941,12 @@ function ImpulseApp(props: ImpulseParams) {
       const actionsMap = {
         ...arrowsMap,
         ...homerowMap,
+        Space: () => {
+          kbarQuery.toggle()
+        },
+        Enter: () => {
+          kbarQuery.toggle()
+        },
       }
 
       const action = actionsMap[event.code as keyof typeof actionsMap]

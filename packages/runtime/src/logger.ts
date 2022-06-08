@@ -5,3 +5,7 @@ export function trace(...messages: any) {
 export function warn(...messages: any) {
   console.warn(...messages)
 }
+
+export function alert(message: string) {
+  alert(message)
+}

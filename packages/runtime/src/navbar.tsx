@@ -1,5 +1,6 @@
 import animatedScrollTo from 'animated-scroll-to'
 import { ForwardedRef, forwardRef, useEffect, useRef } from 'react'
+import { elementGetAbsolutePosition } from './dom'
 import { nodeIsComponentRoot, getReactFiber } from './react-source'
 
 export const ElementNavbar = forwardRef(
@@ -42,6 +43,8 @@ export const ElementNavbar = forwardRef(
     const children = Array.from(selectedNode.childNodes).filter(
       (element) => !element.__impulseHide,
     )
+
+    const {width, height} = elementGetAbsolutePosition(selectedNode)
 
     return (
       <div
@@ -96,26 +99,29 @@ export const ElementNavbar = forwardRef(
               )
             })}
           </div>
-          <div className="flex flex-col overflow-y-auto bg-[#eeeeee] justify-center items-center rounded-tr-lg">
-            {children.map((childElement, idx) => {
-              return (
-                <div
-                  key={idx}
-                  className="cursor-pointer"
-                  onClick={() => props.onNodeClick(childElement)}
-                >
-                  {childElement instanceof HTMLElement ? (
-                    <>
-                      {'<'}
-                      {childElement.tagName.toLowerCase()}
-                      {'>'}
-                    </>
-                  ) : (
-                    '#text'
-                  )}
-                </div>
-              )
-            })}
+          <div className="flex flex-col overflow-y-auto bg-[#eeeeee] items-center rounded-tr-lg">
+            <div className="mt-2">{width}x{height}</div>
+            <div className='flex flex-col justify-center items-center grow'>
+              {children.map((childElement, idx) => {
+                return (
+                  <div
+                    key={idx}
+                    className="cursor-pointer"
+                    onClick={() => props.onNodeClick(childElement)}
+                  >
+                    {childElement instanceof HTMLElement ? (
+                      <>
+                        {'<'}
+                        {childElement.tagName.toLowerCase()}
+                        {'>'}
+                      </>
+                    ) : (
+                      '#text'
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

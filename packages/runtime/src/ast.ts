@@ -5,7 +5,12 @@ import * as t from '@babel/types'
 import { dirname } from 'path'
 import prettier from 'prettier'
 import parserBabel from 'prettier/parser-babel'
-import { findClosestFile, fsGetFileContents, fsWriteToFile, OpenFile } from './fs'
+import {
+  findClosestFile,
+  fsGetFileContents,
+  fsWriteToFile,
+  OpenFile,
+} from './fs'
 import { trace, warn } from './logger'
 import {
   elementGetOwnerWithSource,
@@ -64,9 +69,7 @@ export type TransformNodeResultSuccess<R> = {
 
 export async function transformNodeInCode<T extends Node, R>(
   domNode: T,
-  visitor: (
-    path: NodePath<T extends Element ? t.JSXElement : JSXNode>,
-  ) => R,
+  visitor: (path: NodePath<T extends Element ? t.JSXElement : JSXNode>) => R,
   dirHandle: FileSystemDirectoryHandle,
   options?: {
     preferAncestor?: 'parent' | 'owner' | 'none'
@@ -353,12 +356,11 @@ export async function transformNodeInCode<T extends Node, R>(
   if (!visitorHasBeenCalled) {
     warn('no node matched', domNode)
   }
-  
+
   // const prettierConfig = await findClosestFile(dirHandle, fileSrc, ['.prettierrc.js'])
   // console.log('prettierConfig', prettierConfig);
   const prettierConfig = options?.prettierConfig
 
-  debugger
   const formattedCode = prettier.format(transformResult.babelResult.code!, {
     ...prettierConfig,
     parser: 'babel-ts',
