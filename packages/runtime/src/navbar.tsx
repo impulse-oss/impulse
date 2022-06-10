@@ -44,7 +44,9 @@ export const ElementNavbar = forwardRef(
       (element) => !element.__impulseHide,
     )
 
-    const {width, height} = elementGetAbsolutePosition(selectedNode)
+    const { width, height } = elementGetAbsolutePosition(selectedNode)
+
+    const roundTwoDecimals = (num: number) => Math.round(num * 100) / 100
 
     return (
       <div
@@ -68,7 +70,11 @@ export const ElementNavbar = forwardRef(
             {parentElement.tagName.toLowerCase()}
             {'>'}
             {Array.from(parentElement.classList).map((cls, idx) => {
-              return <div className="border-b border-[#65db65]" key={idx}>{cls}</div>
+              return (
+                <div className="border-b border-[#65db65]" key={idx}>
+                  {cls}
+                </div>
+              )
             })}
           </div>
           <div
@@ -84,7 +90,7 @@ export const ElementNavbar = forwardRef(
                   {...(isSelectedElement
                     ? { ref: selectedNodeElementRef }
                     : {})}
-                  className="p-2 flex-shrink-0 cursor-pointer min-h-1/4"
+                  className="p-2 flex-shrink-0 cursor-pointer min-h-1/4 relative"
                   style={{
                     borderBottom: '1px solid #0399FF',
                     outline: isSelectedElement ? `2px solid #0399FF` : 'none',
@@ -95,13 +101,19 @@ export const ElementNavbar = forwardRef(
                   }}
                 >
                   <ElementDetails node={childElement} />
+                  {isSelectedElement ? (
+                    <div className="absolute -bottom-5 right-0 p-[2px] bg-[#0399FF] text-white text-[10px] z-10">
+                      {roundTwoDecimals(width)}x{roundTwoDecimals(height)}
+                    </div>
+                  ) : (
+                    ''
+                  )}
                 </div>
               )
             })}
           </div>
           <div className="flex flex-col overflow-y-auto bg-[#eeeeee] items-center rounded-tr-lg">
-            <div className="mt-2">{width}x{height}</div>
-            <div className='flex flex-col justify-center items-center grow'>
+            <div className="flex flex-col justify-center items-center grow">
               {children.map((childElement, idx) => {
                 return (
                   <div
