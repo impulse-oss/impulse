@@ -151,24 +151,32 @@ function ImpulseApp(props: ImpulseParams) {
     const siblingBefore = children[indexInsideParent - 1] as Element | undefined
     const siblingAfter = children[indexInsideParent + 1] as Element | undefined
 
+    const selectOrExit: typeof setSelectedElement = (node, parameters) => {
+      if (document.body.contains(node)) {
+        return setSelectedElement(node, parameters)
+      }
+
+      return removeElementSelection()
+    }
+
     if (siblingSameSpot && !siblingSameSpot.__impulseHide) {
-      setSelectedElement(siblingSameSpot)
+      selectOrExit(siblingSameSpot)
       return
     }
 
     if (siblingBefore) {
-      setSelectedElement(siblingBefore)
+      selectOrExit(siblingBefore)
       return
     }
 
     if (siblingAfter) {
-      setSelectedElement(siblingAfter, {
+      selectOrExit(siblingAfter, {
         indexInsideParent: indexInsideParent - 1,
       })
       return
     }
 
-    setSelectedElement(parentElement)
+    selectOrExit(parentElement)
   }
 
   const {
@@ -222,7 +230,19 @@ function ImpulseApp(props: ImpulseParams) {
       },
     )
 
+    const interval = setInterval(() => {
+      if (
+        selectionState.selectedNode &&
+        !document.body.contains(selectionState.selectedNode)
+      ) {
+        warn('selected element is no longer mounted on the page')
+        onSelectedElementRemoved()
+        rerender()
+      }
+    }, 1000)
+
     return () => {
+      clearInterval(interval)
       observer.disconnect()
       if (parentObserver) {
         parentObserver.disconnect()
@@ -1104,14 +1124,18 @@ function RenderResults() {
               {item.shortcut &&
                 item.shortcut.length > 0 &&
                 item.shortcut.map((key, idx) => {
-                  const isMac = navigator.platform.toUpperCase().startsWith('MAC')
+                  const isMac = navigator.platform
+                    .toUpperCase()
+                    .startsWith('MAC')
 
                   return (
                     <span
                       key={key + idx}
                       className="uppercase font-mono bg-[#d9d9d9] py-1 px-2 rounded-md text-xs"
                     >
-                      {key.replace('Key', '').replace('$mod', isMac ? 'Cmd' : 'Ctrl')}
+                      {key
+                        .replace('Key', '')
+                        .replace('$mod', isMac ? 'Cmd' : 'Ctrl')}
                     </span>
                   )
                 })}

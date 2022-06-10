@@ -2,7 +2,8 @@
   "name": "@impulse.dev/runtime",
   "files": [
     "src",
-    "dist"
+    "dist",
+    "inject.js"
   ],
   "main": "./dist/impulse.umd.js",
   "types": "./dist/src/index.d.ts",

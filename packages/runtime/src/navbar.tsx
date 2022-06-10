@@ -102,7 +102,7 @@ export const ElementNavbar = forwardRef(
                 >
                   <ElementDetails node={childElement} />
                   {isSelectedElement ? (
-                    <div className="absolute -bottom-5 right-0 p-[2px] bg-[#0399FF] text-white text-[10px] z-10">
+                    <div className="absolute -bottom-5 right-0 p-[2px] bg-[#0399FF] text-white text-[10px] z-10 font-mono">
                       {roundTwoDecimals(width)}x{roundTwoDecimals(height)}
                     </div>
                   ) : (
