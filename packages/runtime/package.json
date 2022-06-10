@@ -1,15 +1,23 @@
 {
   "name": "@impulse/runtime",
   "files": [
-    "dist-prod"
+    "src",
+    "dist"
   ],
-  "main": "./dist-prod/index.js",
-  "types": "./dist-prod/index.d.ts",
+  "main": "./dist/impulse.umd.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/impulse.es.js",
+      "require": "./dist/impulse.umd.js",
+      "type": "./dist/index.d.ts"
+    }
+  },
   "version": "0.0.1",
   "scripts": {
     "lint": "eslint \"./**/*.{ts,tsx,js}\" --fix",
     "build": "vite build",
-    "clean": "rm -rf dist dist-prod",
+    "clean": "rm -rf dist dist",
     "dev": "npm run clean && concurrently npm:dev:*",
     "dev:lib": "vite build --watch --outDir dist",
     "dev:app": "cd dev-app && vite --port 3005",
@@ -45,6 +53,7 @@
     "tailwindcss": "^3.0.24",
     "tsup": "^5.12.7",
     "typescript": "^4.6.4",
-    "vite": "^2.9.9"
+    "vite": "^2.9.9",
+    "vite-plugin-dts": "^1.2.0"
   }
 }
