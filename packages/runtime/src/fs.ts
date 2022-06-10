@@ -1,5 +1,6 @@
 import { get, set } from 'idb-keyval'
 import { useRef } from 'react'
+import { warn } from './logger'
 import { getReactFiber } from './react-source'
 
 export async function fsGetSourceForNode(
@@ -123,7 +124,7 @@ export async function detectRootPath(
   }
 
   if (validVariantFiles.length > 1) {
-    console.warn(
+    warn(
       `Multiple root paths found: ${validVariantFiles
         .map(([variant]) => variant)
         .join('\n')}`,

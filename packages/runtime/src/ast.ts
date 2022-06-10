@@ -19,6 +19,7 @@ import {
   fiberTags,
   getReactFiber,
 } from './react-source'
+import { undoFileOnChange } from './undo'
 
 export type JSXNode = t.JSXElement['children'][0]
 
@@ -378,6 +379,11 @@ export async function transformNodeInCode<T extends Node, R>(
 export function writeTransformationResultToFile(
   transformResult: TransformNodeResultSuccess<unknown>,
 ) {
+  undoFileOnChange(
+    transformResult.file.path,
+    transformResult.file.text,
+    transformResult.code,
+  )
   return fsWriteToFile(transformResult.file.fileHandle, transformResult.code)
 }
 

@@ -36,6 +36,7 @@ import {
   getReactFiber,
   nodeIsComponentRoot,
 } from './react-source'
+import { undoLatestChange } from './undo'
 
 declare global {
   interface Window {
@@ -615,6 +616,10 @@ function ImpulseApp(props: ImpulseParams) {
     }
   }
 
+  const tryToUndoLatestChange = async () => {
+    undoLatestChange(await getDirHandle({ mode: 'readwrite' }))
+  }
+
   const sections = {
     general: 'General',
     removeClass: 'Remove class',
@@ -826,6 +831,14 @@ function ImpulseApp(props: ImpulseParams) {
       perform: () =>
         selectionState.type === 'elementSelected' &&
         insertAfterNode(selectionState.selectedNode, t.jsxText(searchQuery)),
+    },
+    undo: {
+      showIf: true,
+      section: sections.general,
+      name: 'Undo',
+      shortcut: ['$mod+KeyZ'],
+      perform: () =>
+        selectionState.type === 'elementSelected' && tryToUndoLatestChange(),
     },
   }
 
@@ -1091,12 +1104,14 @@ function RenderResults() {
               {item.shortcut &&
                 item.shortcut.length > 0 &&
                 item.shortcut.map((key, idx) => {
+                  const isMac = navigator.platform.toUpperCase().startsWith('MAC')
+
                   return (
                     <span
                       key={key + idx}
                       className="uppercase font-mono bg-[#d9d9d9] py-1 px-2 rounded-md text-xs"
                     >
-                      {key.replace('Key', '')}
+                      {key.replace('Key', '').replace('$mod', isMac ? 'Cmd' : 'Ctrl')}
                     </span>
                   )
                 })}
