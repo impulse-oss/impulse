@@ -1,5 +1,5 @@
 {
-  "name": "@impulse/runtime",
+  "name": "@impulse.dev/runtime",
   "files": [
     "src",
     "dist"
@@ -13,15 +13,15 @@
       "type": "./dist/index.d.ts"
     }
   },
-  "version": "0.0.1",
+  "version": "0.0.2",
   "scripts": {
     "lint": "eslint \"./**/*.{ts,tsx,js}\" --fix",
     "build": "vite build",
-    "clean": "rm -rf dist dist",
+    "clean": "rm -rf dist",
     "dev": "npm run clean && concurrently npm:dev:*",
     "dev:lib": "vite build --watch --outDir dist",
     "dev:app": "cd dev-app && vite --port 3005",
-    "publish-stable": "npm publish"
+    "publish-stable": "npm publish --access public"
   },
   "devDependencies": {
     "@babel/standalone": "^7.18.1",

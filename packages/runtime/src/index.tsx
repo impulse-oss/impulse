@@ -2,7 +2,15 @@ import ReactDOM from 'react-dom/client'
 import styles from './styles.css'
 import { ImpulseParams, ImpulseRoot } from './app'
 
-export function mountApp(params?: ImpulseParams) {
+declare global {
+  interface Window {
+    IMPULSE_RUN: typeof run   
+  }
+}
+
+window.IMPULSE_RUN = run
+
+export function run(params?: ImpulseParams) {
   if (typeof window === 'undefined') {
     return
   }
@@ -18,4 +26,5 @@ export function mountApp(params?: ImpulseParams) {
 
   const root = ReactDOM.createRoot(rootElement)
   root.render(<ImpulseRoot {...params} />)
+  console.log('Impulse started successfully! 🎉');
 }

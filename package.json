@@ -9,6 +9,7 @@
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
     "publish-stable": "turbo run publish-stable",
+    "login": "npm login --scope=@impulse.dev",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
