@@ -714,6 +714,24 @@ function ImpulseApp(props: ImpulseParams) {
         selectionState.type === 'elementSelected' &&
         moveNode(selectionState.selectedNode, 'down'),
     },
+    insertDivChild: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        selectionState.selectedNode instanceof Element,
+      name: 'Insert child: <div>',
+      shortcut: ['KeyI', 'KeyI'],
+      section: sections.general,
+      perform: () =>
+        selectionState.type === 'elementSelected' &&
+        insertChild(
+          selectionState.selectedNode as Element,
+          t.jsxElement(
+            t.jsxOpeningElement(t.jsxIdentifier('div'), []),
+            t.jsxClosingElement(t.jsxIdentifier('div')),
+            [],
+          ),
+        ),
+    },
     insertDivBefore: {
       showIf: selectionState.type === 'elementSelected',
       name: 'Insert before: <div>',
@@ -739,24 +757,6 @@ function ImpulseApp(props: ImpulseParams) {
         selectionState.type === 'elementSelected' &&
         insertAfterNode(
           selectionState.selectedNode,
-          t.jsxElement(
-            t.jsxOpeningElement(t.jsxIdentifier('div'), []),
-            t.jsxClosingElement(t.jsxIdentifier('div')),
-            [],
-          ),
-        ),
-    },
-    insertDivChild: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof Element,
-      name: 'Insert child: <div>',
-      shortcut: ['KeyI', 'KeyI'],
-      section: sections.general,
-      perform: () =>
-        selectionState.type === 'elementSelected' &&
-        insertChild(
-          selectionState.selectedNode as Element,
           t.jsxElement(
             t.jsxOpeningElement(t.jsxIdentifier('div'), []),
             t.jsxClosingElement(t.jsxIdentifier('div')),
