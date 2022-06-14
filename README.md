@@ -1,39 +1,43 @@
 # Impulse: yes-code UI editor (alpha)
 
 [impulse.dev](https://impulse.dev) | [Discord](https://discord.gg/RbVE8cj9)
-made by [@krogovoy](https://twitter.com/krogovoy) and [@IVolchenskov](https://twitter.com/IVolchenskov)
 
-TODO: video link
+Made by [@krogovoy](https://twitter.com/krogovoy) and [@IVolchenskov](https://twitter.com/IVolchenskov)
 
-Impulse is a visual UI editor for web apps that use React and Tailwind.
+<!-- TODO video link -->
+
+Impulse is a visual UI editor for developers that use React and Tailwind.
 
 It allows you to edit your UI right in the browser while automatically changing your code precisely the way you would do it manually.
 
-- Built into you app: no need to install any extensions or desktop apps
+- Built into your app: no need to install any extensions or desktop apps
 - No external services, works directly with the code
 - Made exclusively for developers, not designers
 - Addon, not a replacement: gives you a new tool while not taking anything away
 
 Compared to writing code manually:
+
 - Faster
 - More fun
 - Same code produced
 
 Features:
-- Select any DOM element and jump streight to its code in your editor
+
+- Select any DOM element and jump straight to its code in your editor
 - Add new markup visually without leaving the browser
 - Make edits to any existing DOM element with all changes saved to code automatically
-
 
 ## Requirements
 
 Rendering libraries:
+
 - ✅ React 17+
 - ⬜️ Vue (possibly in the future)
 - 🚫 Svelte (no plans for support)
 - 🚫 Angular (no plans for support)
 
 React frameworks and bundlers:
+
 - ✅ Next.js
 - ✅ Create React App
 - ✅ Vite
@@ -43,10 +47,12 @@ React frameworks and bundlers:
 - ✅ any custom system built on top of Babel/Webpack/Rollup
 
 CSS frameworks:
+
 - ✅ Tailwind
 - 🚫 no plans to support other CSS frameworks for now
 
 Browsers:
+
 - ✅ Chromium-based
 - 🚫 Firefox
 - 🚫 Safari
@@ -54,15 +60,15 @@ Browsers:
 (Impulse relies on [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API) which only works well in Chromium-based browsers)
 
 Editor integration:
+
 - ✅ VS Code
 - ⬜️ more coming
-
 
 ## Install
 
 ### Try now
 
-Copy and paste the code below into you browser's console.
+Copy and paste the code below into your browser's console.
 
 ```js
 d=document;s=d.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/inject.js';d.body.appendChild(s)
@@ -70,12 +76,14 @@ d=document;s=d.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@impu
 
 ### <script> tag
 
-TODO: test
-
 Paste this script tag at the end of `<body>`
 
 ```jsx
-{process.env.NODE_ENV === 'development' && <script src="https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/inject.js"></script>}
+{
+  process.env.NODE_ENV === 'development' && (
+    <script src="https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/inject.js"></script>
+  )
+}
 ```
 
 ### NPM
@@ -94,22 +102,23 @@ IMPORTANT: make sure you are not shipping Impulse in your production build! It w
 
 Most bundlers cut out all the code inside an `if (process.env.NODE_ENV === 'development') { ... }`, but it's recommended to make a production build and compare the bundle size to what it was before.
 
-
 ## Setup
 
 ### Browser
 
 If you are using Brave, enable File System Access API:
+
 1. Go to brave://flags
 2. Search for `file system access api`
 3. Change it to "Enabled"
 
 Impulse only works if you run your development environment on the same computer that you use the browser. Impulse doesn't work with remote environments because it can't edit files on other computers.
 
-For security reasons, File System Access API only works for `localhost` when http:// is used. If you are using a different host name even though the environment is local, you should:
+For security reasons, File System Access API only works for `localhost` when http:// is used. If you are using a different hostname even though the environment is local, you should:
+
 1. Go to chrome://flags
 2. Search for `Insecure origins treated as secure`
-3. Add the your origin (e.g. http://my_origin) to the list
+3. Add your origin (e.g. http://my_origin) to the list
 
 ### Prettier
 
@@ -128,21 +137,33 @@ if (process.env.NODE_ENV === 'development') {
 }
 ```
 
-Issues:
-
-I change something and the selection goes away
-
-
 ## Use
 
-A picture's worth a thousand words. A movie's worth a thousand pictures.
+IMPORTANT: Impulse is alpha software. Although not likely, assume that it can unrecoverably ruin your codebase. Make sure to have a backup and/or a clean git state.
 
-TODO embed video
+<!-- A picture's worth a thousand words. A movie's worth a thousand pictures. -->
 
-IMPORANT: Impulse is alpha software. Although not likely, assume that it can unrecoverably ruin your codebase. Make sure to have a backup and/or a clean git state.
+<!-- TODO embed video -->
 
-TODO text instruction after I fix the FS workflow
+- Option/Alt+Click to select any element on the page
+- Esc to remove selection
+- Arrow keys or h, j, k, l for keyboard navigation
+- Space or Enter to open the command bar
+- Use the command bar or the hotkeys (specified on the right for each action) to perform actions
 
+![command bar](./files/command-bar-screenshot.png)
+
+What you can do:
+
+- Jump to the code of the selected element
+- Jump to where the React component of the selected element is called
+- Add or remove a class (so far only works if the list of classes in the code is hardcoded with no conditions)
+- Remove the element
+- Insert a new `<div></div>`
+- Change the tag of the element (e.g. div -> p)
+- Insert a new text
+- Move elements (swap with the previous/next sibling)
+- Undo the latest change
 
 ## Get help or share feedback
 
@@ -152,20 +173,24 @@ TODO text instruction after I fix the FS workflow
 ## Contribute
 
 Requirements:
+
 - node 16+
 - npm 8.9.0+
 
 Clone the repo:
+
 ```sh
 git clone git@github.com:kirillrogovoy/impulse.git && cd impulse
 ```
 
 Install dependencies:
+
 ```sh
 npm install
 ```
 
 Run the dev server:
+
 ```sh
 npm run dev
 ```
