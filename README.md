@@ -1,6 +1,7 @@
 # Impulse: yes-code UI editor (alpha)
 
 [impulse.dev](https://impulse.dev) | [Discord](https://discord.gg/RbVE8cj9)
+made by [@krogovoy](https://twitter.com/krogovoy) and [@IVolchenskov](https://twitter.com/IVolchenskov)
 
 TODO: video link
 
@@ -27,18 +28,19 @@ Features:
 ## Requirements
 
 Rendering libraries:
-- ✅ React
+- ✅ React 17+
 - ⬜️ Vue (possibly in the future)
 - 🚫 Svelte (no plans for support)
 - 🚫 Angular (no plans for support)
 
-React frameworks:
+React frameworks and bundlers:
 - ✅ Next.js
 - ✅ Create React App
 - ✅ Vite
-- ✅ any custom system built on top of Babel/Webpack/Rollup
-- ⬜️ esbuild (TODO link issue)
+- ⬜️ Remix
+- ⬜️ esbuild (https://github.com/evanw/esbuild/issues/2318)
 - ⬜️ Parcel
+- ✅ any custom system built on top of Babel/Webpack/Rollup
 
 CSS frameworks:
 - ✅ Tailwind
@@ -146,7 +148,6 @@ TODO text instruction after I fix the FS workflow
 
 - [Discord server](https://discord.gg/RbVE8cj9)
 - [Discussions on Github](https://github.com/kirillrogovoy/impulse/discussions)
-- Tweet me at [@krogovoy](https://twitter.com/krogovoy) (DMs are open too)
 
 ## Contribute
 
