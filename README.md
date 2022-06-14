@@ -4,7 +4,7 @@
 
 TODO: video link
 
-Impulse is a visual editor for web apps that use React and Tailwind.
+Impulse is a visual UI editor for web apps that use React and Tailwind.
 
 It allows you to edit your UI right in the browser while automatically changing your code precisely the way you would do it manually.
 
