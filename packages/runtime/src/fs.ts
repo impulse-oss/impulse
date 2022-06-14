@@ -1,4 +1,4 @@
-import { get, set } from 'idb-keyval'
+import { get, set, del } from 'idb-keyval'
 import { useRef } from 'react'
 import { warn } from './logger'
 import { getReactFiber } from './react-source'
@@ -9,22 +9,27 @@ export async function fsGetSourceForNode(
     mode: FileSystemPermissionMode
   }) => Promise<FileSystemDirectoryHandle | null>,
 ) {
+  const cWarn = (...messages: any[]) => warn('fsGetSourceForNode', ...messages)
   const fiber = getReactFiber(element)
   if (!fiber) {
+    cWarn('no fiber found')
     return null
   }
 
   const source = fiber._debugSource
   if (!source) {
+    cWarn('_debugSource is empty')
     return null
   }
   const dirHandle = await requestDirHandle({ mode: 'readwrite' })
   if (!dirHandle) {
+    cWarn('failed to get FS access')
     return null
   }
 
   const contents = await fsGetFileContents(dirHandle, source.fileName)
   if (!contents) {
+    cWarn('failed to get file contents')
     return null
   }
 
@@ -47,6 +52,7 @@ export async function fsGetFileContents(
   const rootPath = await detectRootPath(dirHandle, path)
 
   if (!rootPath) {
+    console.log(`Could not find path ${path} in the selected directory`)
     return
   }
 
@@ -54,6 +60,7 @@ export async function fsGetFileContents(
   const fileHandle = await fsGetFile(dirHandle, relativePath)
 
   if (!fileHandle) {
+    console.log(`Could not find path ${path} (relative path ${relativePath})`)
     return
   }
 
@@ -91,17 +98,13 @@ export async function fsWriteToFile(
   fileHandle: FileSystemFileHandle,
   data: string,
 ): Promise<void> {
-  const save = async () => {
-    await fileHandle.requestPermission({ mode: 'readwrite' })
-    const writeStream = await fileHandle.createWritable()
-    await writeStream.write(data)
-    await writeStream.close()
-  }
-
-  await save()
+  await fileHandle.requestPermission({ mode: 'readwrite' })
+  const writeStream = await fileHandle.createWritable()
+  await writeStream.write(data)
+  await writeStream.close()
 }
 
-export async function detectRootPath(
+async function detectRootPath(
   dirHandle: FileSystemDirectoryHandle,
   fullPath: string,
 ) {
@@ -120,6 +123,7 @@ export async function detectRootPath(
   const validVariantFiles = variantFiles.filter(([, file]) => file !== null)
 
   if (validVariantFiles.length === 0) {
+    warn('Could not find the root path')
     return null
   }
 
@@ -159,13 +163,11 @@ export async function findClosestFile(
   }
 
   return findClosestFile(dirHandle, currentDir, fileNameCandidates)
-
 }
 
 export function fileToText(file: File): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader()
-    // eslint-disable-next-line immutable/no-mutation
     reader.onload = (e) => {
       resolve(e.target!.result! as string)
     }
@@ -193,6 +195,13 @@ export function useDirHandle() {
         return handlerFromIdb
       }
 
+      alert(
+        [
+          `For this feature to work, Impluse needs access to your code.`,
+          `In the following dialog, please select the root folder of your project.`,
+          `This is usually the folder that contains your package.json file.`,
+        ].join('\n'),
+      )
       const dirHandler = await window.showDirectoryPicker()
       dirHandlerRef.current = dirHandler
       await set('dirHandler', dirHandler)
@@ -202,8 +211,17 @@ export function useDirHandle() {
     if (
       (await dirHandler.queryPermission({ mode: params.mode })) !== 'granted'
     ) {
-      await dirHandler.requestPermission({ mode: params.mode })
-      await set('dirHandler', dirHandler)
+      const newPermissionState = await dirHandler.requestPermission({
+        mode: params.mode,
+      })
+
+      if (newPermissionState === 'granted') {
+        await set('dirHandler', dirHandler)
+      } else {
+        dirHandlerRef.current = null
+        await del('dirHandler')
+        warn(`fs: permission denied for ${params.mode}`)
+      }
     }
 
     return dirHandler

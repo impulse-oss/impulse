@@ -8,6 +8,6 @@ export default defineConfig({
     include: ['../../../.prettierrc.js'],
   },
   define: {
-    'process.env': {}
-  }
+    'process.env': {},
+  },
 })

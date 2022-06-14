@@ -414,24 +414,17 @@ function isSourceJsxElement(node: t.JSXElement, fiberSource: FiberSource) {
   return isTargetTag
 }
 
-function isSourceJsxFragment(node: t.JSXFragment, fiberSource: FiberSource) {
-  const loc = node.openingFragment.loc
-  const isTargetTag =
-    loc?.start.line === fiberSource.lineNumber &&
-    loc?.start.column === fiberSource.columnNumber
-
-  return isTargetTag
-}
-
 export function isNotEmptyNode(node: JSXNode) {
   if (node.type === 'JSXText' && node.value.trim().length === 0) {
     return false
   }
+
   if (
     node.type === 'JSXExpressionContainer' &&
     node.expression.type === 'JSXEmptyExpression'
   ) {
     return false
   }
+
   return true
 }

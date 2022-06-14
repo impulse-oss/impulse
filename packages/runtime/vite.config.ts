@@ -13,9 +13,8 @@ export default defineConfig({
     lib: {
       entry: path.resolve(__dirname, 'src/index.tsx'),
       name: 'Impulse',
-      fileName: (format) => `impulse.${format}.js`
+      fileName: (format) => `impulse.${format}.js`,
     },
-    rollupOptions: {
-    }
-  }
+    rollupOptions: {},
+  },
 })

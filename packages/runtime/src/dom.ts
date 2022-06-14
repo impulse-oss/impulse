@@ -1,11 +1,3 @@
-export function elemenentToString(element: HTMLElement) {
-  return `<${element.tagName.toLocaleLowerCase()} ${Array.from(
-    element.attributes,
-  )
-    .map((attribute) => `${attribute.name}="${attribute.value}"`)
-    .join(' ')}>`
-}
-
 export function elementGetAbsolutePosition(node: Node) {
   const rect =
     node instanceof HTMLElement

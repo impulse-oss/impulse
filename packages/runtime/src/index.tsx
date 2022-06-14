@@ -4,7 +4,7 @@ import { ImpulseParams, ImpulseRoot } from './app'
 
 declare global {
   interface Window {
-    IMPULSE_RUN: typeof run   
+    IMPULSE_RUN: typeof run
   }
 }
 
@@ -26,5 +26,5 @@ export function run(params?: ImpulseParams) {
 
   const root = ReactDOM.createRoot(rootElement)
   root.render(<ImpulseRoot {...params} />)
-  console.log('Impulse started successfully! 🎉');
+  console.log('Impulse started successfully! 🎉')
 }
