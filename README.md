@@ -29,6 +29,11 @@ Features:
 
 ## Requirements
 
+Languages:
+
+- ✅ Javascript
+- ✅ Typescript (typings built in)
+
 Rendering libraries:
 
 - ✅ React 17+
@@ -66,7 +71,9 @@ Editor integration:
 
 ## Install
 
-### Try now
+There are three ways to try Impulse.
+
+### Option 1: Try now
 
 Copy and paste the code below into your browser's console.
 
@@ -74,7 +81,23 @@ Copy and paste the code below into your browser's console.
 d=document;s=d.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/inject.js';d.body.appendChild(s)
 ```
 
-### <script> tag
+Easy way to play with the tool without installing anything, but obviously, it will go away once you refresh the page.
+
+### Option 2: npm (recommended)
+
+```sh
+npm i -D @impulse.dev/runtime@latest
+```
+
+Paste in any file that always gets imported. Usually it'll be the "main" React file, such as `_app.jsx` in Next.js.
+
+```js
+if (process.env.NODE_ENV === 'development') {
+  import('@impulse.dev/runtime').then((impulse) => impulse.run())
+}
+```
+
+### Option 3: a <script> tag
 
 Paste this script tag at the end of `<body>`
 
@@ -83,18 +106,6 @@ Paste this script tag at the end of `<body>`
   process.env.NODE_ENV === 'development' && (
     <script src="https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/inject.js"></script>
   )
-}
-```
-
-### NPM
-
-```sh
-npm i -D @impulse.dev/runtime
-```
-
-```js
-if (process.env.NODE_ENV === 'development') {
-  import('@impulse.dev/runtime').then((impulse) => impulse.run())
 }
 ```
 
