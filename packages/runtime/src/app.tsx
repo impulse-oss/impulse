@@ -827,30 +827,57 @@ function ImpulseApp(props: ImpulseParams) {
       section: sections.insertText,
       name: `Insert child: ${searchQuery}`,
       shortcut: [],
-      perform: () =>
-        selectionState.type === 'elementSelected' &&
-        insertChild(
-          selectionState.selectedNode as Element,
-          t.jsxText(searchQuery),
-        ),
+      perform: () => {
+        if (selectionState.type !== 'elementSelected') {
+          return
+        }
+
+        const htmlEntitiesRegex = /[\u00A0-\u9999<>\&]/g
+
+        const nodeToInsert = htmlEntitiesRegex.test(searchQuery)
+          ? t.jsxExpressionContainer(t.stringLiteral(searchQuery))
+          : t.jsxText(searchQuery)
+
+        insertChild(selectionState.selectedNode as Element, nodeToInsert)
+      },
     },
     insertTextBefore: {
       showIf: selectionState.type === 'elementSelected' && searchQuery !== '',
       section: sections.insertText,
       name: `Insert before: ${searchQuery}`,
       shortcut: [],
-      perform: () =>
-        selectionState.type === 'elementSelected' &&
-        insertBeforeNode(selectionState.selectedNode, t.jsxText(searchQuery)),
+      perform: () => {
+        if (selectionState.type !== 'elementSelected') {
+          return
+        }
+
+        const htmlEntitiesRegex = /[\u00A0-\u9999<>\&]/g
+
+        const nodeToInsert = htmlEntitiesRegex.test(searchQuery)
+          ? t.jsxExpressionContainer(t.stringLiteral(searchQuery))
+          : t.jsxText(searchQuery)
+
+        insertBeforeNode(selectionState.selectedNode as Element, nodeToInsert)
+      },
     },
     insertTextAfter: {
       showIf: selectionState.type === 'elementSelected' && searchQuery !== '',
       section: sections.insertText,
       name: `Insert after: ${searchQuery}`,
       shortcut: [],
-      perform: () =>
-        selectionState.type === 'elementSelected' &&
-        insertAfterNode(selectionState.selectedNode, t.jsxText(searchQuery)),
+      perform: () => {
+        if (selectionState.type !== 'elementSelected') {
+          return
+        }
+
+        const htmlEntitiesRegex = /[\u00A0-\u9999<>\&]/g
+
+        const nodeToInsert = htmlEntitiesRegex.test(searchQuery)
+          ? t.jsxExpressionContainer(t.stringLiteral(searchQuery))
+          : t.jsxText(searchQuery)
+
+        insertAfterNode(selectionState.selectedNode as Element, nodeToInsert)
+      },
     },
     undo: {
       showIf: true,
