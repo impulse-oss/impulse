@@ -8,6 +8,14 @@ Made by [@krogovoy](https://twitter.com/krogovoy) and [@IVolchenskov](https://tw
 
 Impulse is a visual UI editor for developers that use React and Tailwind.
 
+<br />
+
+<img src="https://static.tildacdn.com/tild3533-6633-4039-b462-366564616231/impulse-gif-create-p.gif" alt="impulse demo" width="600" />
+
+[Watch full demo (40:22)](https://youtu.be/QaTSsaGXCco)
+
+<br />
+
 It allows you to edit your UI right in the browser while automatically changing your code precisely the way you would do it manually.
 
 - Built into your app: no need to install any extensions or desktop apps
@@ -89,7 +97,7 @@ Easy way to play with the tool without installing anything, but obviously, it wi
 npm i -D @impulse.dev/runtime@latest
 ```
 
-Paste in any file that always gets imported. Usually it'll be the "main" React file, such as `_app.jsx` in Next.js.
+Paste into any file that always gets imported. Usually it'll be the "main" React file, such as `_app.jsx` in Next.js.
 
 ```js
 if (process.env.NODE_ENV === 'development') {
@@ -152,9 +160,7 @@ if (process.env.NODE_ENV === 'development') {
 
 IMPORTANT: Impulse is alpha software. Although not likely, assume that it can unrecoverably ruin your codebase. Make sure to have a backup and/or a clean git state.
 
-<!-- A picture's worth a thousand words. A movie's worth a thousand pictures. -->
-
-<!-- TODO embed video -->
+[Watch full demo (40:22)](https://youtu.be/QaTSsaGXCco]
 
 - Option/Alt+Click to select any element on the page
 - Esc to remove selection
