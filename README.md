@@ -162,7 +162,7 @@ IMPORTANT: Impulse is alpha software. Although not likely, assume that it can un
 - Space or Enter to open the command bar
 - Use the command bar or the hotkeys (specified on the right for each action) to perform actions
 
-![command bar](./files/command-bar-screenshot.png)
+<img src="./files/command-bar-screenshot.png" alt="command bar" width="600">
 
 What you can do:
 
