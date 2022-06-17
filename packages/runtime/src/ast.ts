@@ -149,16 +149,16 @@ export async function transformNodeInCode<T extends Node, R>(
         return false
       }
 
-      const parentOwner = parentElementFiber?._debugOwner?._debugSource
-        ? parentElementFiber._debugOwner
-        : ownerWithSource
-
       const props = parentElementFiber.memoizedProps ?? {}
       const children = props.children
 
       if (typeof children !== 'string') {
         return false
       }
+
+      const parentOwner = parentElementFiber?._debugOwner?._debugSource
+        ? parentElementFiber._debugOwner
+        : ownerWithSource
 
       // the text node is the child of a component
       if (

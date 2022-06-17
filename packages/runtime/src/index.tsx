@@ -8,7 +8,9 @@ declare global {
   }
 }
 
-window.IMPULSE_RUN = run
+if (typeof window !== 'undefined') {
+  window.IMPULSE_RUN = run
+}
 
 export function run(params?: ImpulseParams) {
   if (typeof window === 'undefined') {
