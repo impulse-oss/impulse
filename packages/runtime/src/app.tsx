@@ -255,7 +255,7 @@ function ImpulseApp(props: ImpulseParams) {
 
   const kbarContext = useContext(KBarContext)
 
-  const { getDirHandle } = useDirHandle()
+  const { getDirHandle, FsAccessWarningAlert } = useDirHandle()
 
   const jumpToCode = async (selectedNode: Node) => {
     const fiber = getReactFiber(selectedNode)
@@ -1126,6 +1126,7 @@ function ImpulseApp(props: ImpulseParams) {
           />
         </>
       )}
+      <FsAccessWarningAlert />
     </div>
     // </ImpulseAppContext.Provider>
   )

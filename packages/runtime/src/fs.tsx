@@ -1,7 +1,10 @@
 import { get, set, del } from 'idb-keyval'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { warn } from './logger'
 import { getReactFiber } from './react-source'
+import { AlertModal } from './dialog'
+import { useSubject } from './event'
+import { firstValueFrom } from 'rxjs'
 
 export async function fsGetSourceForNode(
   element: Node,
@@ -178,6 +181,25 @@ export function fileToText(file: File): Promise<string> {
 export function useDirHandle() {
   const dirHandlerRef = useRef<FileSystemDirectoryHandle | null>(null)
 
+  const [alertIsOpen, setAlertIsOpen] = useState(false)
+  const alertClosed$ = useSubject<void>()
+  const FsAccessWarningAlert = () => (
+    <AlertModal
+      isOpen={alertIsOpen}
+      title="File system access"
+      description={[
+        `For this feature to work, Impluse needs the access to your code.`,
+        `In the following dialog, please select the root folder of your project.`,
+        `This is usually the folder that contains your package.json file.`,
+      ].join('\n')}
+      buttonText="OK"
+      onClose={() => {
+        setAlertIsOpen(false)
+        alertClosed$.next()
+      }}
+    />
+  )
+
   const getDirHandle = async (params: { mode: FileSystemPermissionMode }) => {
     const dirHandler = await (async () => {
       const handlerFromRef = dirHandlerRef.current
@@ -195,13 +217,10 @@ export function useDirHandle() {
         return handlerFromIdb
       }
 
-      alert(
-        [
-          `For this feature to work, Impluse needs access to your code.`,
-          `In the following dialog, please select the root folder of your project.`,
-          `This is usually the folder that contains your package.json file.`,
-        ].join('\n'),
-      )
+      setAlertIsOpen(true)
+      console.log('before alert')
+      await firstValueFrom(alertClosed$)
+      console.log('after alert')
       const dirHandler = await window.showDirectoryPicker()
       dirHandlerRef.current = dirHandler
       await set('dirHandler', dirHandler)
@@ -227,5 +246,5 @@ export function useDirHandle() {
     return dirHandler
   }
 
-  return { getDirHandle }
+  return { getDirHandle, FsAccessWarningAlert }
 }
