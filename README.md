@@ -160,7 +160,7 @@ if (process.env.NODE_ENV === 'development') {
 
 IMPORTANT: Impulse is at the alpha stage. Although not likely, assume that it can unrecoverably ruin your codebase. Make sure to have a backup and/or a clean git state.
 
-[Watch full demo (40:22)](https://youtu.be/QaTSsaGXCco]
+[Watch full demo (40:22)](https://youtu.be/QaTSsaGXCco)
 
 - Option/Alt+Click to select any element on the page
 - Esc to remove selection
