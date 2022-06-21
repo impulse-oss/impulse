@@ -1,6 +1,7 @@
 import ReactDOM from 'react-dom/client'
 import styles from './styles.css'
 import { ImpulseParams, ImpulseRoot } from './app'
+import packageInfo from '../package.json'
 
 declare global {
   interface Window {
@@ -28,5 +29,7 @@ export function run(params?: ImpulseParams) {
 
   const root = ReactDOM.createRoot(rootElement)
   root.render(<ImpulseRoot {...params} />)
-  console.log('Impulse started successfully! 🎉')
+
+  const version = packageInfo.version
+  console.log('Impulse started successfully! 🎉', { version })
 }
