@@ -50,26 +50,31 @@ export type OpenFile = {
 
 export async function fsGetFileContents(
   dirHandle: FileSystemDirectoryHandle,
-  path: string,
+  rawPath: string,
 ): Promise<OpenFile | undefined> {
-  const rootPath = await detectRootPath(dirHandle, path)
+  const normalizedPath = normalizePath(rawPath)
+  const rootPath = await detectRootPath(dirHandle, normalizedPath)
 
   if (!rootPath) {
-    console.log(`Could not find path ${path} in the selected directory`)
+    console.log(
+      `Could not find path ${normalizedPath} in the selected directory`,
+    )
     return
   }
 
-  const relativePath = path.replace(rootPath, '')
+  const relativePath = normalizedPath.replace(rootPath, '')
   const fileHandle = await fsGetFile(dirHandle, relativePath)
 
   if (!fileHandle) {
-    console.log(`Could not find path ${path} (relative path ${relativePath})`)
+    console.log(
+      `Could not find path ${normalizedPath} (relative path ${relativePath})`,
+    )
     return
   }
 
   const text = await fileToText(await fileHandle.getFile())
 
-  return { text, fileHandle, path }
+  return { text, fileHandle, path: normalizedPath }
 }
 
 export async function fsGetFile(
@@ -218,9 +223,7 @@ export function useDirHandle() {
       }
 
       setAlertIsOpen(true)
-      console.log('before alert')
       await firstValueFrom(alertClosed$)
-      console.log('after alert')
       const dirHandler = await window.showDirectoryPicker()
       dirHandlerRef.current = dirHandler
       await set('dirHandler', dirHandler)
@@ -247,4 +250,14 @@ export function useDirHandle() {
   }
 
   return { getDirHandle, FsAccessWarningAlert }
+}
+
+export function normalizePath(path: string) {
+  const pathUnixDelims = path.replace(/\\/g, '/')
+
+  if (pathUnixDelims.startsWith('/')) {
+    return pathUnixDelims
+  }
+
+  return `/${pathUnixDelims}`
 }

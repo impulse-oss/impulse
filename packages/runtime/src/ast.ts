@@ -78,17 +78,19 @@ export async function transformNodeInCode<T extends Node, R>(
   },
 ): Promise<TransformNodeResultSuccess<R> | { type: 'error' }> {
   const preferAncestor = options?.preferAncestor ?? 'parent'
+  const fiber = getReactFiber(domNode)
+  const source = fiber?._debugSource
+
   const сWarn = (...messages: any) => {
-    return warn('transformNodeInCode', ...messages)
+    return warn('transformNodeInCode', { fiber, source }, ...messages)
   }
+
   domNode.__impulseDirty = true
   if (!domNode.parentElement) {
     сWarn('domNode.parentElement is null')
     return { type: 'error' }
   }
 
-  const fiber = getReactFiber(domNode)
-  const source = fiber?._debugSource
   const parentFiber = fiber?.return
   const isExternalComponent = !source && fiber?._debugOwner
   const shouldLookForOwner = isExternalComponent || preferAncestor === 'owner'

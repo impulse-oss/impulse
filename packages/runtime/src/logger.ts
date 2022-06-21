@@ -3,7 +3,7 @@ export function trace(...messages: any) {
 }
 
 export function warn(...messages: any) {
-  console.warn(...messages)
+  console.warn('<impulse.dev>', ...messages)
 }
 
 export function alert(message: string) {

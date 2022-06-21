@@ -26,7 +26,7 @@ import {
   observeNode,
   waitForAnyNodeMutation,
 } from './dom'
-import { useDirHandle } from './fs'
+import { normalizePath, useDirHandle } from './fs'
 import { warn } from './logger'
 import { ElementNavbar } from './navbar'
 import {
@@ -1176,7 +1176,8 @@ function RenderResults() {
 }
 
 function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource) {
-  return `vscode://file${fileName}:${lineNumber}:${columnNumber}`
+  const fileNameNormalized = normalizePath(fileName)
+  return `vscode://file${fileNameNormalized}:${lineNumber}:${columnNumber}`
 }
 
 function SelectionBox(props: { selectedElement: Node }) {
