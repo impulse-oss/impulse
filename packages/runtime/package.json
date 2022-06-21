@@ -14,7 +14,7 @@
       "type": "./dist/index.d.ts"
     }
   },
-  "version": "0.0.3",
+  "version": "0.0.4",
   "scripts": {
     "lint": "eslint \"./**/*.{ts,tsx,js}\" --fix",
     "build": "vite build",
