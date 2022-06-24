@@ -1,9 +1,16 @@
 {
   "name": "@impulse.dev/runtime",
+  "version": "0.0.6",
+  "description": "yes-code UI editor",
+  "homepage": "https://impulse.dev",
+  "keywords": ["react", "tailwind", "nocode"],
+  "license": "MIT",
+  "repository": "github:impulse-oss/impulse",
   "files": [
     "src",
     "dist",
-    "inject.js"
+    "inject.js",
+    "README.md"
   ],
   "main": "./dist/impulse.umd.js",
   "types": "./dist/src/index.d.ts",
@@ -14,7 +21,6 @@
       "type": "./dist/index.d.ts"
     }
   },
-  "version": "0.0.5",
   "scripts": {
     "lint": "eslint \"./**/*.{ts,tsx,js}\" --fix",
     "build": "vite build",
