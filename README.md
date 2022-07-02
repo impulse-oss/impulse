@@ -1,6 +1,6 @@
 # Impulse: yes-code UI editor (alpha)
 
-[impulse.dev](https://impulse.dev) | [Discord](https://discord.gg/RbVE8cj9)
+[impulse.dev](https://impulse.dev) | [Discord](https://discord.gg/nDDCyyedbs)
 
 Made by [@krogovoy](https://twitter.com/krogovoy) and [@IVolchenskov](https://twitter.com/IVolchenskov)
 
@@ -184,7 +184,7 @@ What you can do:
 
 ## Get help or share feedback
 
-- [Discord server](https://discord.gg/RbVE8cj9)
+- [Discord server](https://discord.gg/nDDCyyedbs)
 - [Discussions on Github](https://github.com/kirillrogovoy/impulse/discussions)
 
 ## Contribute
