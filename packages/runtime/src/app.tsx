@@ -16,10 +16,10 @@ import {
 } from 'kbar'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import {
+  isNotEmptyNode,
   JSXNode,
   transformNodeInCode,
   writeTransformationResultToFile,
-  isNotEmptyNode,
 } from './ast'
 import {
   elementGetAbsolutePosition,
@@ -30,12 +30,13 @@ import { normalizePath, useDirHandle } from './fs'
 import { warn } from './logger'
 import { ElementNavbar } from './navbar'
 import {
-  Fiber,
   elementGetOwnerWithSource,
+  Fiber,
   FiberSource,
   getReactFiber,
   nodeIsComponentRoot,
 } from './react-source'
+import { useTailwind } from './tailwind'
 import { undoLatestChange } from './undo'
 
 declare global {
@@ -640,6 +641,12 @@ function ImpulseApp(props: ImpulseParams) {
     undoLatestChange(await getDirHandle({ mode: 'readwrite' }))
   }
 
+  const { tailwindClasses } = useTailwind({
+    tailwindConfig: {
+      content: [],
+    },
+  })
+
   const sections = {
     general: 'General',
     removeClass: 'Remove class',
@@ -764,6 +771,28 @@ function ImpulseApp(props: ImpulseParams) {
           ),
         ),
     },
+    ...Object.fromEntries(
+      Object.entries(tailwindClasses).map(([key, value]) => {
+        const className = key.replace(/^\./, '')
+
+        return [
+          `addClass-${className}`,
+          {
+            showIf:
+              selectionState.type === 'elementSelected' &&
+              selectionState.selectedNode instanceof Element,
+            // keywords: value.nodes.flatMap((node) => [node.prop, node.value]).join(' '),
+            name: `${className}`,
+            shortcut: [],
+            section: sections.addClass,
+            perform: () => {
+              selectionState.type === 'elementSelected' &&
+                addClass(selectionState.selectedNode as Element, className)
+            },
+          },
+        ]
+      }),
+    ),
     addClassFromSearch: {
       showIf:
         selectionState.type === 'elementSelected' &&
@@ -772,10 +801,7 @@ function ImpulseApp(props: ImpulseParams) {
         selectionState.selectedNode instanceof Element,
       name: `> ${searchQuery}`,
       shortcut: [],
-      section: {
-        name: 'Add class',
-        priority: -10,
-      },
+      section: sections.addClass,
       perform: () => {
         selectionState.type === 'elementSelected' &&
           addClass(selectionState.selectedNode as Element, searchQuery)

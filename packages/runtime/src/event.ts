@@ -9,7 +9,6 @@ export function useSubject<T>() {
 
   useEffect(() => {
     return () => {
-      console.log('subject completed');
       subjectRef.current!.complete()
       subjectRef.current = undefined
     }

@@ -124,7 +124,7 @@ function App() {
 function Section(props: PropsWithChildren<{ title: string }>) {
   return (
     <div>
-      <h2 className="text-3xl">{props.title}</h2>
+      <h2 className="text-3xl inse">{props.title}</h2>
       <div>{props.children}</div>
       <hr />
     </div>
