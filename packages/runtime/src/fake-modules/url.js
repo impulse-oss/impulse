@@ -1,6 +1,5 @@
-module.exports = {
-  parse: (...args) => {
-    console.log('args', args)
+export default {
+  parse: () => {
     return { href: '' }
   },
 }

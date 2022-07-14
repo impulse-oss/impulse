@@ -2,7 +2,7 @@
 
 let i = 0
 
-module.exports = {
+export default {
   statSync: (id) => {
     // if (id === VIRTUAL_SOURCE_PATH) {
     //   return { mtimeMs: self.BUILD_ID }
