@@ -71,7 +71,7 @@ export function ImpulseRoot(props: ImpulseParams) {
       >
         <ImpulseApp {...props} />
         <KBarPortal>
-          <KBarPositioner className="impulse-styles" style={{ zIndex: 100100 }}>
+          <KBarPositioner className="impulse-styles" style={{ zIndex: 10200 }}>
             <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
               <KBarSearch
                 className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0"
@@ -256,7 +256,7 @@ function ImpulseApp(props: ImpulseParams) {
 
   const kbarContext = useContext(KBarContext)
 
-  const { getDirHandle, FsAccessWarningAlert } = useDirHandle()
+  const { getDirHandle, FsAccessWarningAlert, alertIsOpen } = useDirHandle()
 
   const jumpToCode = async (selectedNode: Node) => {
     const fiber = getReactFiber(selectedNode)
@@ -970,6 +970,10 @@ function ImpulseApp(props: ImpulseParams) {
         return
       }
 
+      if (alertIsOpen) {
+        return
+      }
+
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
         return
       }
@@ -1055,7 +1059,7 @@ function ImpulseApp(props: ImpulseParams) {
         capture: true,
       })
     }
-  }, [selectionState])
+  }, [selectionState, alertIsOpen])
 
   useEffect(() => {
     if (selectionState.type !== 'elementSelected') {

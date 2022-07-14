@@ -249,7 +249,7 @@ export function useDirHandle() {
     return dirHandler
   }
 
-  return { getDirHandle, FsAccessWarningAlert }
+  return { getDirHandle, FsAccessWarningAlert, alertIsOpen }
 }
 
 export function normalizePath(path: string) {
