@@ -139,7 +139,7 @@ For security reasons, File System Access API only works for `localhost` when htt
 2. Search for `Insecure origins treated as secure`
 3. Add your origin (e.g. http://my_origin) to the list
 
-### Prettier
+### Prettier config
 
 Impulse edits your files and uses Prettier for formatting.
 

@@ -2,7 +2,7 @@ import { BabelFileResult } from '@babel/core'
 import { transform } from '@babel/standalone'
 import type { NodePath, TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
-import { dirname } from 'path'
+import { dirname } from 'path-browserify'
 import prettier from 'prettier'
 import parserBabel from 'prettier/parser-babel'
 import {

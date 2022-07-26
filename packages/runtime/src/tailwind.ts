@@ -72,7 +72,6 @@ export function useTailwind(params: { tailwindConfig: TailwindConfig }) {
             },
           ]
         }))
-      console.log('postcssResult', tailwindClasses)
 
       tailwindClassesRef.current = tailwindClasses
       await indexDb.set('tailwindConfigHashCached', tailwindConfigHash)

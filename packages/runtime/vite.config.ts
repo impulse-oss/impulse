@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import dts from 'vite-plugin-dts'
-import path from 'path'
+import path from 'path-browserify'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,7 +12,6 @@ export default defineConfig({
       colorette: path.resolve(__dirname, 'src/fake-modules/colorette.js'),
       fs: path.resolve(__dirname, 'src/fake-modules/fs.js'),
       url: path.resolve(__dirname, 'src/fake-modules/url.js'),
-      path: 'path-browserify',
       'is-glob': path.resolve(__dirname, 'src/fake-modules/is-glob.js'),
       'glob-parent': path.resolve(__dirname, 'src/fake-modules/glob-parent.js'),
       'fast-glob': path.resolve(__dirname, 'src/fake-modules/fast-glob.js'),
@@ -28,5 +27,13 @@ export default defineConfig({
       name: 'Impulse',
       fileName: (format) => `impulse.${format}.js`,
     },
+  },
+  define: {
+    'process.env': {},
+    'process.argv': {},
+    'process.version': JSON.stringify(''),
+    'process.versions': {},
+    'process.platform': JSON.stringify('browser'),
+    'process.browser': true,
   },
 })
