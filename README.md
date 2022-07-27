@@ -10,7 +10,7 @@ Impulse is a visual UI editor for developers that use React and Tailwind.
 
 <br />
 
-<img src="https://static.tildacdn.com/tild3533-6633-4039-b462-366564616231/impulse-gif-create-p.gif" alt="impulse demo" width="600" />
+<img src="https://static.tildacdn.com/tild3533-6633-4039-b462-366564616231/impulse-gif-create-p.gif" alt="impulse demo" />
 
 [Watch full demo (40:22)](https://youtu.be/QaTSsaGXCco)
 
