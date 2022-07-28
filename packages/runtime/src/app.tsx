@@ -180,13 +180,8 @@ function ImpulseApp(props: ImpulseParams) {
     selectOrExit(parentElement)
   }
 
-  const {
-    currentRootActionId,
-    searchQuery,
-    query: kbarQuery,
-  } = useKBar((state) => {
+  const { searchQuery, query: kbarQuery } = useKBar((state) => {
     return {
-      currentRootActionId: state.currentRootActionId,
       searchQuery: state.searchQuery,
     }
   })
@@ -1091,7 +1086,6 @@ function ImpulseApp(props: ImpulseParams) {
       )
 
       if (transformResult.type === 'error') {
-        // rootNode.style.backgroundColor = 'red'
         console.log('Running test for', rootNode, 'error')
       }
 
@@ -1117,13 +1111,6 @@ function ImpulseApp(props: ImpulseParams) {
   }, [])
 
   return (
-    // <ImpulseAppContext.Provider
-    //   value={{
-    //     selectedElement,
-    //     __rerenderValue,
-    //     rerender,
-    //   }}
-    // >
     <div>
       {selectionState.type === 'elementSelected' && (
         <>
@@ -1158,7 +1145,6 @@ function ImpulseApp(props: ImpulseParams) {
       )}
       <FsAccessWarningAlert />
     </div>
-    // </ImpulseAppContext.Provider>
   )
 }
 

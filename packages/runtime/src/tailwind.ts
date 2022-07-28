@@ -29,14 +29,14 @@ export function useTailwind(params: { tailwindConfig: TailwindConfig }) {
         tailwindClassesRef.current = (await indexDb.get(
           'tailwindClassesCache',
         ))!
-
         return
       }
 
       const postcssResult = postcss([
         tailwind({
           content: [],
-          safelist: [{ pattern: /.*/, variants: [] }],
+          // pattern: all classes except for opacity variants like bg-red-100/20 as they produce 80k+ classes
+          safelist: [{ pattern: /^[^\/]+$/, variants: [] }],
           corePlugins: {
             preflight: false,
           },
@@ -51,28 +51,32 @@ export function useTailwind(params: { tailwindConfig: TailwindConfig }) {
           `,
       )
 
-      const tailwindClasses = Object.fromEntries(postcssResult.root.nodes
-        .filter((node) => {
-          const singleClassSelectorRegex = /^\.\S+$/
-          return node.type === 'rule' && node.selector.match(singleClassSelectorRegex)
-        })
-        .map((rule) => {
-          rule = rule as Rule
-          return [
-            rule.selector,
-            {
-              nodes: rule.nodes
-                .filter((node) => {
-                  return node.type === 'decl'
-                })
-                .map((decl) => {
-                  decl = decl as Declaration
-                  return { prop: decl.prop, value: decl.value }
-                }),
-            },
-          ]
-        }))
-
+      const tailwindClasses = Object.fromEntries(
+        postcssResult.root.nodes
+          .filter((node) => {
+            const singleClassSelectorRegex = /^\.\S+$/
+            return (
+              node.type === 'rule' &&
+              node.selector.match(singleClassSelectorRegex)
+            )
+          })
+          .map((rule) => {
+            rule = rule as Rule
+            return [
+              rule.selector,
+              {
+                nodes: rule.nodes
+                  .filter((node) => {
+                    return node.type === 'decl'
+                  })
+                  .map((decl) => {
+                    decl = decl as Declaration
+                    return { prop: decl.prop, value: decl.value }
+                  }),
+              },
+            ]
+          }),
+      )
       tailwindClassesRef.current = tailwindClasses
       await indexDb.set('tailwindConfigHashCached', tailwindConfigHash)
       await indexDb.set('tailwindClassesCache', tailwindClasses)

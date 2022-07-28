@@ -1,22 +1,15 @@
 import { BabelFileResult } from '@babel/core'
-import { transform } from '@babel/standalone'
 import type { NodePath, TraverseOptions } from '@babel/traverse'
 import * as t from '@babel/types'
-import { dirname } from 'path-browserify'
+import { transform as cmTransform } from '@codemod/core'
 import prettier from 'prettier'
 import parserBabel from 'prettier/parser-babel'
-import {
-  findClosestFile,
-  fsGetFileContents,
-  fsWriteToFile,
-  OpenFile,
-} from './fs'
-import { trace, warn } from './logger'
+import { fsGetFileContents, fsWriteToFile, OpenFile } from './fs'
+import { warn } from './logger'
 import {
   elementGetOwnerWithSource,
   fiberGetSiblings,
   FiberSource,
-  fiberTags,
   getReactFiber,
 } from './react-source'
 import { undoFileOnChange } from './undo'
@@ -38,7 +31,7 @@ export function transformCode(
   visitor: TraverseOptions,
 ): TransformResult {
   try {
-    const babelResult = transform(inputCode, {
+    const babelResult = cmTransform(inputCode, {
       plugins: [{ visitor }],
       parserOpts: {
         sourceType: 'unambiguous',

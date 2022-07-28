@@ -1,15 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-const libConfig = require('../vite.config')
+const libConfig = require('../vite.config').default
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  resolve: libConfig.default.resolve,
-  build: {
-    target: ['es2020'],
+  server: {
+    port: 3005,
   },
+  plugins: [react()],
+  resolve: libConfig.resolve,
+  build: {
+    target: libConfig.build.target,
+  },
+  optimizeDeps: libConfig.optimizeDeps,
   define: {
-    'process.env': {},
+    // 'process.env': {},
   },
 })
