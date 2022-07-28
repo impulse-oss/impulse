@@ -32,7 +32,8 @@
     "dev": "npm run clean && concurrently npm:dev:*",
     "dev:lib": "vite build --watch",
     "dev:app": "cd dev-app && vite",
-    "publish-stable": "npm publish --access public && curl https://purge.jsdelivr.net/npm/@impulse.dev/runtime@latest"
+    "reset-cdn-cache": "curl https://purge.jsdelivr.net/npm/@impulse.dev/runtime@latest && curl https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest",
+    "publish-stable": "npm publish --access public && npm run reset-cdn-cache"
   },
   "devDependencies": {
     "@babel/types": "^7.18.9",
