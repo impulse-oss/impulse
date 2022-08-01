@@ -1,11 +1,14 @@
 import { Fragment, PropsWithChildren, useState } from 'react'
 import logo from './logo.svg'
 import { ImpulseRoot } from '../../src/app'
-import '../../dist/style.css'
 import { Alert } from '@mui/material'
 import { RedText } from './red-text'
 import headerImgUrl from '../header.png'
 import vegIconUrl from '../veg.png'
+
+// if (process.env.NODE_ENV === "development") {
+//   import("../../dist/impulse.es.mjs").then((impulse) => impulse.run());
+// }
 
 function App() {
   const [count, setCount] = useState(0)

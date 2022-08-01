@@ -1,2 +1,1 @@
-export const Buffer = {
-}
+export {Buffer} from 'buffer'

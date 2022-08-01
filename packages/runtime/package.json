@@ -16,23 +16,23 @@
     "inject.js",
     "README.md"
   ],
-  "main": "./dist/impulse.umd.js",
+  "browser": "./dist/impulse.es.mjs",
+  "main": "./dist/impulse.es.mjs",
   "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/impulse.es.js",
-      "require": "./dist/impulse.umd.js",
-      "type": "./dist/index.d.ts"
+      "import": "./dist/impulse.es.mjs",
+      "type": "./dist/src/index.d.ts"
     }
   },
   "scripts": {
     "lint": "eslint \"./**/*.{ts,tsx,js}\" --fix",
-    "build": "vite build",
+    "build": "node build.js",
     "clean": "rm -rf dist",
     "dev": "npm run clean && concurrently npm:dev:*",
     "dev:lib": "vite build --watch",
     "dev:app": "cd dev-app && vite",
-    "reset-cdn-cache": "curl https://purge.jsdelivr.net/npm/@impulse.dev/runtime@latest && curl https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest",
+    "reset-cdn-cache": "curl https://purge.jsdelivr.net/npm/@impulse.dev/runtime@latest/impulse.iife.js && curl https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/impulse.iife.js > /dev/null",
     "publish-stable": "npm publish --access public && npm run reset-cdn-cache"
   },
   "devDependencies": {
@@ -55,8 +55,12 @@
     "animated-scroll-to": "^2.3.0",
     "assert": "^2.0.0",
     "autoprefixer": "^10.4.7",
+    "buffer": "^6.0.3",
     "click-to-react-component": "^1.0.8",
     "concurrently": "^7.3.0",
+    "esbuild": "^0.14.51",
+    "esbuild-plugin-alias": "^0.2.1",
+    "esbuild-plugin-d.ts": "^1.1.0",
     "idb-keyval": "^6.2.0",
     "kbar": "^0.1.0-beta.36",
     "os-browserify": "^0.3.0",

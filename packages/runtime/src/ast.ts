@@ -350,7 +350,8 @@ export async function transformNodeInCode<T extends Node, R>(
   }
 
   if (!visitorHasBeenCalled) {
-    warn('no node matched', domNode)
+    warn('no node matched', domNode, file)
+    return { type: 'error' }
   }
 
   // const prettierConfig = await findClosestFile(dirHandle, fileSrc, ['.prettierrc.js'])

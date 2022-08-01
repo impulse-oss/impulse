@@ -13,7 +13,7 @@ if (typeof window !== 'undefined') {
   window.IMPULSE_RUN = run
 }
 
-export function run(params?: ImpulseParams) {
+function run(params?: ImpulseParams) {
   if (typeof window === 'undefined') {
     return
   }
@@ -33,3 +33,5 @@ export function run(params?: ImpulseParams) {
   const version = packageInfo.version
   console.log('Impulse started successfully! 🎉', { version })
 }
+
+export { run, ImpulseRoot }
