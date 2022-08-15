@@ -58,6 +58,8 @@ export function ImpulseRoot(props: ImpulseParams) {
       id="impulse-root"
       className="impulse-styles"
       style={{
+        // prevent the styles outside of root from being applied
+        all: 'initial',
         position: 'absolute',
         top: 0,
         left: 0,
