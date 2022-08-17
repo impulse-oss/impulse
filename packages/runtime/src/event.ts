@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react"
-import {Subject} from 'rxjs'
+import { useEffect, useRef } from 'react'
+import { Subject } from 'rxjs'
 
 export function useSubject<T>() {
   const subjectRef = useRef<Subject<T>>()

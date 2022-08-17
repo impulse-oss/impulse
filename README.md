@@ -54,8 +54,8 @@ React frameworks and bundlers:
 - ✅ Next.js
 - ✅ Create React App
 - ✅ Vite
+- ✅ esbuild
 - ⬜️ Remix
-- ⬜️ esbuild (https://github.com/evanw/esbuild/issues/2318)
 - ⬜️ Parcel
 - ✅ any custom system built on top of Babel/Webpack/Rollup
 
@@ -86,7 +86,7 @@ There are three ways to try Impulse.
 Copy and paste the code below into your browser's console.
 
 ```js
-d=document;s=d.createElement('script');s.src=`https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/inject.js?${Date.now()}`;d.body.appendChild(s)
+d=document;s=d.createElement('script');s.src=`https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/inject.js`;d.body.appendChild(s)
 ```
 
 Easy way to play with the tool without installing anything, but obviously, it will go away once you refresh the page.

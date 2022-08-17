@@ -1,4 +1,4 @@
-.impulse-styles, #headlessui-portal-root {
+.impulse-styles {
   @tailwind base;
   @tailwind components;
   @tailwind utilities;

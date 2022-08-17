@@ -72,7 +72,7 @@ const aliases = {
   react: require.resolve('react'),
   path: require.resolve('path-browserify'),
   os: require.resolve('os-browserify'),
-  // can't use just resolve('asset') because it resolves to built-in node module
+  // can't use just resolve('assert') because it resolves to built-in node module
   assert: require.resolve('../../node_modules/assert'),
   colorette: path.resolve(__dirname, 'src/fake-modules/colorette.js'),
   crypto: path.resolve(__dirname, 'src/fake-modules/crypto.js'),

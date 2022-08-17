@@ -17,14 +17,19 @@ export default defineConfig({
       os: 'os-browserify',
       assert: 'assert',
       'is-glob': path.resolve(__dirname, '../src/fake-modules/is-glob.js'),
-      'glob-parent': path.resolve(__dirname, '../src/fake-modules/glob-parent.js'),
+      'glob-parent': path.resolve(
+        __dirname,
+        '../src/fake-modules/glob-parent.js',
+      ),
       'fast-glob': path.resolve(__dirname, '../src/fake-modules/fast-glob.js'),
+      'tailwind.config.js': path.resolve(__dirname, '../tailwind.config.js'),
     },
   },
   build: {
     target: 'es2020',
   },
   optimizeDeps: {
+    include: ['tailwind.config.js'],
     esbuildOptions: {
       inject: [
         path.resolve(__dirname, '../src/fake-modules/process.js'),

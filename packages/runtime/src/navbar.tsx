@@ -164,15 +164,33 @@ function ElementDetails(props: { node: Node }) {
     <div>
       {'<'}
       <b>{node.tagName.toLocaleLowerCase()}</b>
-      {Array.from(node.attributes).map((attribute, idx) => {
-        return (
-          <span key={attribute.name + idx}>
-            {' '}
-            <span className="whitespace-nowrap">{attribute.name}</span>=
-            <span className="text-red-700">"{attribute.value}"</span>
-          </span>
-        )
-      })}
+      {Array.from(node.attributes)
+        .filter((attribute) => {
+          if (attribute.name === 'class' && attribute.value === '') {
+            return false
+          }
+          return true
+        })
+
+        .map((attribute, idx) => {
+          const attributeValue = (() => {
+            if (attribute.name === 'class') {
+              return [...node.classList]
+                .filter((className) => !className.startsWith('__impulse__'))
+                .join(' ')
+            }
+
+            return attribute.value
+          })()
+
+          return (
+            <span key={attribute.name + idx}>
+              {' '}
+              <span className="whitespace-nowrap">{attribute.name}</span>=
+              <span className="text-red-700">"{attributeValue}"</span>
+            </span>
+          )
+        })}
       {'>'}
       {typeof ownerType === 'function' && (
         <span>

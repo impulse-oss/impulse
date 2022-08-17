@@ -40,7 +40,7 @@ export function useTailwind(params: { tailwindConfig: TailwindConfig }) {
           corePlugins: {
             preflight: false,
           },
-          theme: {},
+          theme: tailwindConfig.theme ?? {},
           plugins: [],
         }),
       ]).process(
@@ -63,14 +63,14 @@ export function useTailwind(params: { tailwindConfig: TailwindConfig }) {
           .map((rule) => {
             rule = rule as Rule
             return [
-              rule.selector,
+              rule.selector.replace('.', ''),
               {
+                css: rule.toString(),
                 nodes: rule.nodes
-                  .filter((node) => {
+                  .filter((node): node is Declaration => {
                     return node.type === 'decl'
                   })
                   .map((decl) => {
-                    decl = decl as Declaration
                     return { prop: decl.prop, value: decl.value }
                   }),
               },

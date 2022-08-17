@@ -21,6 +21,7 @@ import {
   transformNodeInCode,
   writeTransformationResultToFile,
 } from './ast'
+import { ClassEditor, useClassEditor } from './class-editor'
 import {
   elementGetAbsolutePosition,
   observeNode,
@@ -36,8 +37,10 @@ import {
   getReactFiber,
   nodeIsComponentRoot,
 } from './react-source'
-import { useTailwind } from './tailwind'
+import { TailwindClasses, useTailwind } from './tailwind'
+import { makeTransformers } from './transformers'
 import { undoLatestChange } from './undo'
+import { useAtomGetter } from './useAtomGetter'
 
 declare global {
   interface Window {
@@ -56,7 +59,7 @@ export function ImpulseRoot(props: ImpulseParams) {
   return (
     <div
       id="impulse-root"
-      className="impulse-styles"
+      className="impulse-styles theme-solarized-light"
       style={{
         // prevent the styles outside of root from being applied
         all: 'initial',
@@ -65,6 +68,26 @@ export function ImpulseRoot(props: ImpulseParams) {
         left: 0,
       }}
     >
+      <style>{`
+      .theme-solarized-light {
+        --theme-color-base03: 0 43 54;
+        --theme-color-base02: 7 54 66;
+        --theme-color-base01: 88 110 117;
+        --theme-color-base00: 101 123 131;
+        --theme-color-base0: 131 148 150;
+        --theme-color-base1: 147 161 161;
+        --theme-color-base2: 238 232 213;
+        --theme-color-base3: 253 246 227;
+        --theme-color-yellow: 223 202 136;
+        --theme-color-orange: 203 45 0;
+        --theme-color-red: 220 50 50;
+        --theme-color-magenta: 211 47 47;
+        --theme-color-violet: 108 113 117;
+        --theme-color-blue: 38 139 210;
+        --theme-color-cyan: 42 161 152;
+        --theme-color-green: 133 153 0;
+      }
+      `}</style>
       <KBarProvider
         options={{
           disableScrollbarManagement: true,
@@ -73,14 +96,19 @@ export function ImpulseRoot(props: ImpulseParams) {
       >
         <ImpulseApp {...props} />
         <KBarPortal>
-          <KBarPositioner className="impulse-styles" style={{ zIndex: 10200 }}>
-            <KBarAnimator className="rounded-lg w-full max-w-xl overflow-hidden bg-white text-slate-900 drop-shadow-lg border">
-              <KBarSearch
-                className="py-3 px-4 text-base w-full box-border outline-0 border-0 m-0"
-                defaultPlaceholder="Start typing..."
-              />
-              <RenderResults />
-            </KBarAnimator>
+          <KBarPositioner
+            className="impulse-styles theme-solarized-light"
+            style={{ zIndex: 10200 }}
+          >
+            <div className="w-full max-w-xl overflow-hidden text-theme-base01 bg-theme-base3 text-base shadow-lg border">
+              <div className="px-2 pt-2 font-sans">
+                <KBarSearch
+                  className="w-full box-border outline-0 m-0 bg-theme-base2 border border-theme-yellow outline-none text-theme-base01 px-1 py-px selection:bg-theme-yellow/50"
+                  defaultPlaceholder="Start typing..."
+                />
+              </div>
+              <CommandBarResults />
+            </div>
           </KBarPositioner>
         </KBarPortal>
       </KBarProvider>
@@ -94,7 +122,7 @@ const ImpulseAppContext = createContext<{
   rerender: () => void
 }>({ __rerenderValue: 0, selectedElement: null, rerender: () => {} })
 
-type SelectionState =
+export type SelectionState =
   | {
       type: 'elementSelected'
       selectedNode: Node
@@ -107,6 +135,7 @@ type SelectionState =
 
 export type ImpulseParams = {
   prettierConfig?: any
+  tailwindConfig?: any
   config?: {}
 }
 
@@ -115,7 +144,7 @@ function ImpulseApp(props: ImpulseParams) {
     type: 'elementNotSelected',
   })
 
-  const setSelectedElement = (
+  const setSelectedNode = (
     selectedElement: Node,
     parameters?: { indexInsideParent?: number },
   ) => {
@@ -154,9 +183,9 @@ function ImpulseApp(props: ImpulseParams) {
     const siblingBefore = children[indexInsideParent - 1] as Element | undefined
     const siblingAfter = children[indexInsideParent + 1] as Element | undefined
 
-    const selectOrExit: typeof setSelectedElement = (node, parameters) => {
+    const selectOrExit: typeof setSelectedNode = (node, parameters) => {
       if (document.body.contains(node)) {
-        return setSelectedElement(node, parameters)
+        return setSelectedNode(node, parameters)
       }
 
       return removeElementSelection()
@@ -182,23 +211,7 @@ function ImpulseApp(props: ImpulseParams) {
     selectOrExit(parentElement)
   }
 
-  const { searchQuery, query: kbarQuery } = useKBar((state) => {
-    return {
-      searchQuery: state.searchQuery,
-    }
-  })
-
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver(() => {
-      rerender()
-    })
-
-    resizeObserver.observe(document.body)
-
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [])
+  const { query: kbarQuery } = useKBar()
 
   const navbarRef = useRef<HTMLDivElement>(null)
   const originalBodyPaddingBottom = useRef('')
@@ -222,7 +235,22 @@ function ImpulseApp(props: ImpulseParams) {
 
     const { observer, parentObserver } = observeNode(
       selectionState.selectedNode,
-      () => {
+      (records) => {
+        // some of our code adds temporary classes and it's not a good case to rerender
+        if (
+          records.every((record) => {
+            return (
+              record.type === 'attributes' &&
+              record.attributeName === 'class' &&
+              record.target instanceof Element &&
+              [...record.target.classList].find((cl) =>
+                cl.startsWith('__impulse__'),
+              )
+            )
+          })
+        ) {
+          return
+        }
         onSelectedElementRemoved()
         rerender()
       },
@@ -252,8 +280,321 @@ function ImpulseApp(props: ImpulseParams) {
   const rerender = () => __setRerenderValue(Math.random())
 
   const kbarContext = useContext(KBarContext)
-
   const { getDirHandle, FsAccessWarningAlert, alertIsOpen } = useDirHandle()
+
+  const { tailwindClasses } = useTailwind({
+    tailwindConfig: {
+      content: [],
+      theme: props.tailwindConfig?.theme ?? undefined,
+    },
+  })
+
+  const classEditor = useClassEditor()
+
+  // click
+  useEffect(() => {
+    const elementOnClick = (event: MouseEvent) => {
+      const elementUnderCursor = event.target as Node
+      const parentElement = elementUnderCursor.parentElement
+
+      if (!parentElement) {
+        return
+      }
+
+      if (
+        parentElement.id === 'impulse-root' ||
+        parentElement.closest('#impulse-root')
+      ) {
+        return
+      }
+
+      if (!event.altKey) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      setSelectedNode(elementUnderCursor)
+
+      if (elementUnderCursor instanceof HTMLElement) {
+        elementUnderCursor.blur()
+      }
+    }
+
+    document.addEventListener('click', elementOnClick, { capture: true })
+
+    return () => {
+      document.removeEventListener('click', elementOnClick, { capture: true })
+    }
+  }, [])
+
+  const classEditorStateGetter = useAtomGetter(classEditor.stateAtom)
+
+  // keyboard
+  useEffect(() => {
+    const documentOnKeyDown = (event: KeyboardEvent) => {
+      if (selectionState.type !== 'elementSelected') {
+        return
+      }
+
+      if (kbarContext.getState().visualState === VisualState.showing) {
+        return
+      }
+
+      if (alertIsOpen) {
+        return
+      }
+
+      const classEditorState = classEditorStateGetter()
+      if (classEditorState.type === 'active') {
+        return
+      }
+
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return
+      }
+
+      const arrowsMap = {
+        ArrowLeft: () => {
+          const parent = selectionState.parentElement
+          if (!parent) {
+            return
+          }
+          setSelectedNode(parent)
+        },
+        ArrowUp: () => {
+          const previousNode = selectionState.selectedNode.previousSibling
+
+          if (!previousNode) {
+            return
+          }
+
+          setSelectedNode(previousNode)
+        },
+        ArrowDown: () => {
+          const nextNode = selectionState.selectedNode.nextSibling
+
+          if (!nextNode) {
+            return
+          }
+
+          setSelectedNode(nextNode)
+        },
+        ArrowRight: () => {
+          const firstChild = selectionState.selectedNode.firstChild
+
+          if (!firstChild) {
+            return
+          }
+          setSelectedNode(firstChild)
+        },
+        Escape: () => {
+          if (selectionState.type === 'elementSelected') {
+            removeElementSelection()
+            return true
+          }
+          return false
+        },
+      }
+
+      const homerowMap = {
+        KeyH: arrowsMap.ArrowLeft,
+        KeyJ: arrowsMap.ArrowDown,
+        KeyK: arrowsMap.ArrowUp,
+        KeyL: arrowsMap.ArrowRight,
+      }
+
+      const actionsMap = {
+        ...arrowsMap,
+        ...homerowMap,
+        Space: () => {
+          kbarQuery.toggle()
+        },
+        Enter: () => {
+          kbarQuery.toggle()
+        },
+      }
+
+      const action = actionsMap[event.code as keyof typeof actionsMap]
+      if (!action) {
+        return
+      }
+
+      const shouldPrevent = action() ?? true
+
+      if (shouldPrevent) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+
+    document.addEventListener('keydown', documentOnKeyDown, { capture: true })
+
+    return () => {
+      document.removeEventListener('keydown', documentOnKeyDown, {
+        capture: true,
+      })
+    }
+  }, [selectionState, alertIsOpen])
+
+  useEffect(() => {
+    if (selectionState.type !== 'elementSelected') {
+      return
+    }
+
+    if (!(selectionState.selectedNode instanceof Element)) {
+      return
+    }
+
+    animatedScrollTo(selectionState.selectedNode, {
+      verticalOffset: -150,
+    })
+  }, [selectionState])
+
+  useEffect(() => {
+    ;(window as any).$_impulseTest = async (rootNode: Node) => {
+      if (rootNode instanceof Element && rootNode.id === 'impulse-root') {
+        return
+      }
+
+      const transformResult = await transformNodeInCode(
+        rootNode,
+        (path) => {
+          return path.node
+        },
+        await getDirHandle({ mode: 'read' }),
+        { prettierConfig: props.prettierConfig },
+      )
+
+      if (transformResult.type === 'error') {
+        console.log('Running test for', rootNode, 'error')
+      }
+
+      if (
+        transformResult.type === 'success' &&
+        !transformResult.visitorResult
+      ) {
+        console.log('Running test for', rootNode, 'no result')
+      }
+
+      if (
+        transformResult.type === 'success' &&
+        transformResult.visitorResult &&
+        !(rootNode instanceof Element)
+      ) {
+        // console.log('Running test for', rootNode, transformResult.visitorResult)
+      }
+
+      if (rootNode instanceof Element) {
+        ;[...rootNode.childNodes].map((window as any).$_impulseTest)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(() => {
+      rerender()
+    })
+
+    resizeObserver.observe(document.body)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  const transformers = makeTransformers({
+    getDirHandle,
+    selectionState,
+    setSelectedNode,
+    prettierConfig: props.prettierConfig,
+  })
+
+  return (
+    <div>
+      {selectionState.type === 'elementSelected' && (
+        <>
+          <SelectionBox selectedElement={selectionState.selectedNode} />
+          {selectionState.selectedNode.parentElement && (
+            <>
+              {/* <SelectionBoxParent
+                selectedElement={selectionState.selectedNode.parentElement}
+              /> */}
+              {Array.from(selectionState.selectedNode.parentElement.childNodes)
+                .filter((element) => {
+                  return element !== selectionState.selectedNode
+                })
+                .map((element, idx) => {
+                  return (
+                    <SelectionBoxSibling key={idx} selectedElement={element} />
+                  )
+                })}
+            </>
+          )}
+          {Array.from(selectionState.selectedNode.childNodes).map(
+            (child, idx) => (
+              <SelectionBoxChild key={idx} selectedNode={child} />
+            ),
+          )}
+          <ElementNavbar
+            ref={navbarRef}
+            selectedNode={selectionState.selectedNode}
+            onNodeClick={setSelectedNode}
+          />
+        </>
+      )}
+      <CommandBarController
+        prettierConfig={props.prettierConfig}
+        {...{
+          getDirHandle,
+          selectionState,
+          classEditor,
+          tailwindClasses,
+          transformers,
+        }}
+      />
+
+      <ClassEditor
+        selectedNode={
+          selectionState.type === 'elementSelected'
+            ? selectionState.selectedNode
+            : undefined
+        }
+        {...classEditor}
+        {...{
+          tailwindClasses,
+          transformers,
+          rerender,
+        }}
+      />
+
+      <FsAccessWarningAlert />
+    </div>
+  )
+}
+
+function CommandBarController(props: {
+  prettierConfig?: any
+  getDirHandle: ReturnType<typeof useDirHandle>['getDirHandle']
+  selectionState: SelectionState
+  classEditor: ReturnType<typeof useClassEditor>
+  tailwindClasses: TailwindClasses
+  transformers: ReturnType<typeof makeTransformers>
+}) {
+  const {
+    getDirHandle,
+    selectionState,
+    classEditor,
+    tailwindClasses,
+    transformers,
+  } = props
+
+  const { searchQuery } = useKBar((state) => {
+    return {
+      searchQuery: state.searchQuery,
+    }
+  })
 
   const jumpToCode = async (selectedNode: Node) => {
     const fiber = getReactFiber(selectedNode)
@@ -322,327 +663,17 @@ function ImpulseApp(props: ImpulseParams) {
     return
   }
 
-  const removeClass = async (
-    selectedElement: Element,
-    classNameToRemove: string,
-  ) => {
-    const transformResult = await transformNodeInCode(
-      selectedElement,
-      ({ node }) => {
-        const cWarn = (...messages: any) => {
-          return warn('removeClass', ...messages)
-        }
-        const attributes = node.openingElement.attributes
-
-        const existingClassNameAttribute = attributes.find(
-          (attribute) =>
-            attribute.type === 'JSXAttribute' &&
-            attribute.name.name === 'className',
-        ) as t.JSXAttribute
-
-        if (!existingClassNameAttribute) {
-          cWarn('removeClass: no className attribute found')
-          return
-        }
-
-        const classNameAttrValue = existingClassNameAttribute.value
-        if (classNameAttrValue?.type !== 'StringLiteral') {
-          cWarn(
-            'removeClass: className attribute is not a string literal, but rather a',
-            classNameAttrValue?.type,
-          )
-          return
-        }
-
-        const classList = classNameAttrValue.value.trim().split(' ')
-        const newClassList = classList.filter(
-          (className) => className !== classNameToRemove,
-        )
-
-        if (newClassList.length === 0) {
-          node.openingElement.attributes = attributes.filter((attribute) => {
-            if (attribute.type !== 'JSXAttribute') {
-              return true
-            }
-
-            return attribute.name.name !== existingClassNameAttribute.name.name
-          })
-          return
-        }
-
-        existingClassNameAttribute.value = t.stringLiteral(
-          newClassList.join(' '),
-        )
-      },
-      await getDirHandle({ mode: 'readwrite' }),
-      { preferAncestor: 'none', prettierConfig: props.prettierConfig },
-    )
-
-    if (transformResult.type === 'error') {
-      return
-    }
-
-    await writeTransformationResultToFile(transformResult)
-  }
-
-  const addClass = async (selectedElement: Element, classNameToAdd: string) => {
-    const transformResult = await transformNodeInCode(
-      selectedElement,
-      ({ node }) => {
-        const attributes = node.openingElement.attributes
-
-        const existingClassNameAttribute = attributes.find(
-          (attribute) =>
-            attribute.type === 'JSXAttribute' &&
-            attribute.name.name === 'className',
-        ) as t.JSXAttribute
-
-        if (existingClassNameAttribute) {
-          if (existingClassNameAttribute.value?.type !== 'StringLiteral') {
-            return
-          }
-
-          const classList = existingClassNameAttribute.value.value.split(' ')
-          if (classList.includes(classNameToAdd)) {
-            return
-          }
-
-          classList.push(classNameToAdd)
-          existingClassNameAttribute.value = t.stringLiteral(
-            classList.join(' ').trim(),
-          )
-
-          return
-        }
-
-        const className = t.jsxAttribute(
-          t.jsxIdentifier('className'),
-          t.stringLiteral(classNameToAdd),
-        )
-
-        attributes.push(className)
-      },
-      await getDirHandle({ mode: 'readwrite' }),
-      { preferAncestor: 'none', prettierConfig: props.prettierConfig },
-    )
-
-    if (transformResult.type === 'error') {
-      return
-    }
-
-    selectedElement.classList.add(classNameToAdd)
-    await writeTransformationResultToFile(transformResult)
-  }
-
-  const removeNode = async (selectedElement: Node) => {
-    const transformResult = await transformNodeInCode(
-      selectedElement,
-      (path) => {
-        path.remove()
-      },
-      await getDirHandle({ mode: 'readwrite' }),
-      {
-        prettierConfig: props.prettierConfig,
-        preferAncestor: nodeIsComponentRoot(selectedElement)
-          ? 'owner'
-          : 'parent',
-      },
-    )
-
-    if (transformResult.type === 'error') {
-      return
-    }
-
-    if (!(selectedElement instanceof HTMLElement)) {
-      await writeTransformationResultToFile(transformResult)
-      return
-    }
-
-    // const oldDisplay = selectedElement.style.display
-
-    // selectedElement.__impulseHide = true
-    // selectedElement.style.display = 'none'
-    // onSelectedElementRemoved()
-
-    await writeTransformationResultToFile(transformResult)
-
-    await waitForAnyNodeMutation(selectedElement)
-
-    // selectedElement.style.display = oldDisplay
-    // if (selectedElement.getAttribute('style') === '') {
-    //   selectedElement.removeAttribute('style')
-    // }
-    // selectedElement.__impulseHide = false
-  }
-
-  const insertBeforeNode = async (
-    selectedElement: Node,
-    jsxNodeToInsert: JSXNode,
-  ) => {
-    const transformResult = await transformNodeInCode(
-      selectedElement,
-      (path) => {
-        path.insertBefore(jsxNodeToInsert)
-      },
-      await getDirHandle({ mode: 'readwrite' }),
-      { prettierConfig: props.prettierConfig },
-    )
-
-    if (transformResult.type === 'error') {
-      return
-    }
-
-    await writeTransformationResultToFile(transformResult)
-  }
-
-  const insertAfterNode = async (
-    selectedElement: Node,
-    jsxNodeToInsert: JSXNode,
-  ) => {
-    const transformResult = await transformNodeInCode(
-      selectedElement,
-      (path) => {
-        path.insertAfter(jsxNodeToInsert)
-      },
-      await getDirHandle({ mode: 'readwrite' }),
-      { prettierConfig: props.prettierConfig },
-    )
-
-    if (transformResult.type === 'error') {
-      return
-    }
-
-    await writeTransformationResultToFile(transformResult)
-
-    await waitForAnyNodeMutation(selectedElement)
-
-    if (selectedElement.nextSibling) {
-      setSelectedElement(selectedElement.nextSibling!)
-    }
-  }
-
-  const insertChild = async (
-    selectedElement: Element,
-    jsxNodeToInsert: JSXNode,
-  ) => {
-    const transformResult = await transformNodeInCode(
-      selectedElement,
-      (path) => {
-        path.node.children.push(jsxNodeToInsert)
-      },
-      await getDirHandle({ mode: 'readwrite' }),
-      { prettierConfig: props.prettierConfig },
-    )
-
-    if (transformResult.type === 'error') {
-      return
-    }
-
-    await writeTransformationResultToFile(transformResult)
-
-    await waitForAnyNodeMutation(selectedElement)
-
-    if (selectedElement.lastChild) {
-      setSelectedElement(selectedElement.lastChild)
-    }
-  }
-
-  const changeTag = async (
-    selectedElement: Element,
-    newTagName: typeof htmlTags[0],
-  ) => {
-    const transformResult = await transformNodeInCode(
-      selectedElement,
-      (path) => {
-        if (path.node.openingElement.name.type !== 'JSXIdentifier') {
-          return
-        }
-        path.node.openingElement.name.name = newTagName.toLowerCase()
-
-        if (path.node.closingElement?.name.type === 'JSXIdentifier') {
-          path.node.closingElement.name.name = newTagName.toLowerCase()
-        }
-      },
-      await getDirHandle({ mode: 'readwrite' }),
-      { prettierConfig: props.prettierConfig },
-    )
-
-    if (transformResult.type === 'error') {
-      return
-    }
-
-    await writeTransformationResultToFile(transformResult)
-
-    await waitForAnyNodeMutation(selectedElement)
-  }
-
-  const moveNode = async (selectedElement: Node, direction: 'up' | 'down') => {
-    const transformResult = await transformNodeInCode(
-      selectedElement,
-      (path) => {
-        const parent = path.parentPath.node
-        if (parent.type !== 'JSXElement' && parent.type !== 'JSXFragment') {
-          return
-        }
-
-        const children = parent.children.filter(isNotEmptyNode)
-
-        const index = children.indexOf(path.node)
-        const siblingIndex = direction === 'up' ? index - 1 : index + 1
-        const sibling = children[siblingIndex]
-        if (!sibling) {
-          return
-        }
-
-        ;[children[index], children[siblingIndex]] = [
-          children[siblingIndex],
-          children[index],
-        ]
-        parent.children = children
-      },
-      await getDirHandle({ mode: 'readwrite' }),
-      {
-        preferAncestor: nodeIsComponentRoot(selectedElement)
-          ? 'owner'
-          : 'parent',
-        prettierConfig: props.prettierConfig,
-      },
-    )
-
-    if (transformResult.type === 'error') {
-      return
-    }
-
-    const parent = selectedElement.parentElement
-    if (!parent) {
-      return
-    }
-
-    if (selectionState.type !== 'elementSelected') {
-      return
-    }
-
-    const newChildIndex =
-      selectionState.indexInsideParent + (direction === 'up' ? -1 : 1)
-
-    await writeTransformationResultToFile(transformResult)
-    await waitForAnyNodeMutation(selectedElement)
-
-    const sibling = parent.childNodes[newChildIndex]
-    if (sibling) {
-      setSelectedElement(sibling)
-    }
-  }
-
-  const tryToUndoLatestChange = async () => {
-    undoLatestChange(await getDirHandle({ mode: 'readwrite' }))
-  }
-
-  const { tailwindClasses } = useTailwind({
-    tailwindConfig: {
-      content: [],
-    },
-  })
+  const {
+    addClass,
+    removeClass,
+    removeNode,
+    insertBeforeNode,
+    insertAfterNode,
+    insertChild,
+    changeTag,
+    moveNode,
+    tryToUndoLatestChange,
+  } = transformers
 
   const sections = {
     general: 'General',
@@ -768,58 +799,6 @@ function ImpulseApp(props: ImpulseParams) {
           ),
         ),
     },
-    ...Object.fromEntries(
-      Object.entries(tailwindClasses).map(([key, value]) => {
-        const className = key.replace(/^\./, '')
-
-        return [
-          `addClass-${className}`,
-          {
-            showIf:
-              selectionState.type === 'elementSelected' &&
-              selectionState.selectedNode instanceof Element,
-            // keywords: value.nodes.flatMap((node) => [node.prop, node.value]).join(' '),
-            name: `${className}`,
-            shortcut: [],
-            section: sections.addClass,
-            perform: () => {
-              selectionState.type === 'elementSelected' &&
-                addClass(selectionState.selectedNode as Element, className)
-            },
-          },
-        ]
-      }),
-    ),
-    addClassFromSearch: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        searchQuery !== '' &&
-        searchQuery.split(' ').length === 1 &&
-        selectionState.selectedNode instanceof Element,
-      name: `> ${searchQuery}`,
-      shortcut: [],
-      section: sections.addClass,
-      perform: () => {
-        selectionState.type === 'elementSelected' &&
-          addClass(selectionState.selectedNode as Element, searchQuery)
-      },
-    },
-    ...(selectionState.type === 'elementSelected' &&
-    selectionState.selectedNode instanceof Element
-      ? Object.fromEntries(
-          Array.from(selectionState.selectedNode.classList).map((className) => [
-            `removeClass-${className}`,
-            {
-              name: `${className}`,
-              shortcut: [],
-              section: sections.removeClass,
-              perform: () =>
-                selectionState.type === 'elementSelected' &&
-                removeClass(selectionState.selectedNode as Element, className),
-            },
-          ]),
-        )
-      : {}),
     ...(selectionState.type === 'elementSelected' &&
     selectionState.selectedNode instanceof Element
       ? Object.fromEntries(
@@ -910,6 +889,17 @@ function ImpulseApp(props: ImpulseParams) {
       perform: () =>
         selectionState.type === 'elementSelected' && tryToUndoLatestChange(),
     },
+    toggleClassEditor: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        selectionState.selectedNode instanceof Element,
+      section: sections.general,
+      name: 'Toggle class editor',
+      shortcut: ['KeyE'],
+      perform: () => {
+        classEditor.toggle()
+      },
+    },
   }
 
   useRegisterActions(
@@ -922,235 +912,10 @@ function ImpulseApp(props: ImpulseParams) {
     [actions],
   )
 
-  // click
-  useEffect(() => {
-    const elementOnClick = (event: MouseEvent) => {
-      const elementUnderCursor = event.target as Node
-      const parentElement = elementUnderCursor.parentElement
-
-      if (!parentElement) {
-        return
-      }
-
-      if (
-        parentElement.id === 'impulse-root' ||
-        parentElement.closest('#impulse-root')
-      ) {
-        return
-      }
-
-      if (!event.altKey) {
-        return
-      }
-
-      event.preventDefault()
-      event.stopPropagation()
-
-      setSelectedElement(elementUnderCursor)
-    }
-
-    document.addEventListener('click', elementOnClick, { capture: true })
-
-    return () => {
-      document.removeEventListener('click', elementOnClick, { capture: true })
-    }
-  }, [])
-
-  // keyboard
-  useEffect(() => {
-    const documentOnKeyDown = (event: KeyboardEvent) => {
-      if (selectionState.type !== 'elementSelected') {
-        return
-      }
-
-      if (kbarContext.getState().visualState === VisualState.showing) {
-        return
-      }
-
-      if (alertIsOpen) {
-        return
-      }
-
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
-        return
-      }
-
-      const arrowsMap = {
-        ArrowLeft: () => {
-          const parent = selectionState.parentElement
-          if (!parent) {
-            return
-          }
-          setSelectedElement(parent)
-        },
-        ArrowUp: () => {
-          const previousNode = selectionState.selectedNode.previousSibling
-
-          if (!previousNode) {
-            return
-          }
-
-          setSelectedElement(previousNode)
-        },
-        ArrowDown: () => {
-          const nextNode = selectionState.selectedNode.nextSibling
-
-          if (!nextNode) {
-            return
-          }
-
-          setSelectedElement(nextNode)
-        },
-        ArrowRight: () => {
-          const firstChild = selectionState.selectedNode.firstChild
-
-          if (!firstChild) {
-            return
-          }
-          setSelectedElement(firstChild)
-        },
-        Escape: () => {
-          if (selectionState.type === 'elementSelected') {
-            removeElementSelection()
-            return true
-          }
-          return false
-        },
-      }
-
-      const homerowMap = {
-        KeyH: arrowsMap.ArrowLeft,
-        KeyJ: arrowsMap.ArrowDown,
-        KeyK: arrowsMap.ArrowUp,
-        KeyL: arrowsMap.ArrowRight,
-      }
-
-      const actionsMap = {
-        ...arrowsMap,
-        ...homerowMap,
-        Space: () => {
-          kbarQuery.toggle()
-        },
-        Enter: () => {
-          kbarQuery.toggle()
-        },
-      }
-
-      const action = actionsMap[event.code as keyof typeof actionsMap]
-      if (!action) {
-        return
-      }
-
-      const shouldPrevent = action() ?? true
-
-      if (shouldPrevent) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-    }
-
-    document.addEventListener('keydown', documentOnKeyDown, { capture: true })
-
-    return () => {
-      document.removeEventListener('keydown', documentOnKeyDown, {
-        capture: true,
-      })
-    }
-  }, [selectionState, alertIsOpen])
-
-  useEffect(() => {
-    if (selectionState.type !== 'elementSelected') {
-      return
-    }
-
-    if (!(selectionState.selectedNode instanceof Element)) {
-      return
-    }
-
-    animatedScrollTo(selectionState.selectedNode, {
-      verticalOffset: -150,
-    })
-  }, [selectionState])
-
-  useEffect(() => {
-    ;(window as any).$_impulseTest = async (rootNode: Node) => {
-      if (rootNode instanceof Element && rootNode.id === 'impulse-root') {
-        return
-      }
-
-      const transformResult = await transformNodeInCode(
-        rootNode,
-        (path) => {
-          return path.node
-        },
-        await getDirHandle({ mode: 'read' }),
-        { prettierConfig: props.prettierConfig },
-      )
-
-      if (transformResult.type === 'error') {
-        console.log('Running test for', rootNode, 'error')
-      }
-
-      if (
-        transformResult.type === 'success' &&
-        !transformResult.visitorResult
-      ) {
-        console.log('Running test for', rootNode, 'no result')
-      }
-
-      if (
-        transformResult.type === 'success' &&
-        transformResult.visitorResult &&
-        !(rootNode instanceof Element)
-      ) {
-        // console.log('Running test for', rootNode, transformResult.visitorResult)
-      }
-
-      if (rootNode instanceof Element) {
-        ;[...rootNode.childNodes].map((window as any).$_impulseTest)
-      }
-    }
-  }, [])
-
-  return (
-    <div>
-      {selectionState.type === 'elementSelected' && (
-        <>
-          <SelectionBox selectedElement={selectionState.selectedNode} />
-          {selectionState.selectedNode.parentElement && (
-            <>
-              <SelectionBoxParent
-                selectedElement={selectionState.selectedNode.parentElement}
-              />
-              {Array.from(selectionState.selectedNode.parentElement.childNodes)
-                .filter((element) => {
-                  return element !== selectionState.selectedNode
-                })
-                .map((element, idx) => {
-                  return (
-                    <SelectionBoxSibling key={idx} selectedElement={element} />
-                  )
-                })}
-            </>
-          )}
-          {Array.from(selectionState.selectedNode.childNodes).map(
-            (child, idx) => (
-              <SelectionBoxChild key={idx} selectedNode={child} />
-            ),
-          )}
-          <ElementNavbar
-            ref={navbarRef}
-            selectedNode={selectionState.selectedNode}
-            onNodeClick={setSelectedElement}
-          />
-        </>
-      )}
-      <FsAccessWarningAlert />
-    </div>
-  )
+  return null
 }
 
-function RenderResults() {
+function CommandBarResults() {
   const { results } = useMatches()
 
   return (
@@ -1158,32 +923,49 @@ function RenderResults() {
       items={results}
       onRender={({ item, active }) =>
         typeof item === 'string' ? (
-          <div className="bg-white uppercase text-xs px-4 py-2">{item}</div>
+          <div className=" uppercase text-xs pt-2">
+            <span className="flex items-center w-full h-6 px-2 bg-theme-base2">
+              {item}
+            </span>
+          </div>
         ) : (
           <div
-            className={`flex justify-between px-4 py-2 ${
-              active ? 'bg-[#eee]' : ''
+            className={`flex justify-between px-2 ${
+              active ? 'bg-theme-yellow' : ''
             }`}
           >
             <div>{item.name}</div>
-            <div className="flex gap-1">
+            <div className="flex gap-1 items-center">
               {item.shortcut &&
                 item.shortcut.length > 0 &&
-                item.shortcut.map((key, idx) => {
+                item.shortcut.map((key, idxItem) => {
                   const isMac = navigator.platform
                     .toUpperCase()
                     .startsWith('MAC')
 
-                  return (
+                  const keyElements = key.split('+')
+                  const symbolReplaceMap: { [key: string]: string } = {
+                    $mod: isMac ? '⌘' : '⌃',
+                    Alt: '⌥',
+                    Shift: '⇧',
+                    Ctrl: '⌃',
+                  }
+
+                  return keyElements.map((keyElement, idx) => (
                     <span
-                      key={key + idx}
-                      className="uppercase font-mono bg-[#d9d9d9] py-1 px-2 rounded-md text-xs"
+                      key={keyElement + idxItem + idx}
+                      className={`w-5 text-center uppercase font-mono bg-theme-base2/90 h-5 inline rounded-md ${
+                        !!symbolReplaceMap[keyElement]
+                          ? 'text-lg leading-5'
+                          : 'text-xs py-1 leading-4'
+                      }`}
                     >
-                      {key
+                      {keyElement
                         .replace('Key', '')
-                        .replace('$mod', isMac ? 'Cmd' : 'Ctrl')}
+                        .replace('Shift', '⇧')
+                        .replace('$mod', isMac ? '⌘' : 'Ctrl')}
                     </span>
-                  )
+                  ))
                 })}
             </div>
           </div>
@@ -1191,11 +973,6 @@ function RenderResults() {
       }
     />
   )
-}
-
-function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource) {
-  const fileNameNormalized = normalizePath(fileName)
-  return `vscode://file${fileNameNormalized}:${lineNumber}:${columnNumber}`
 }
 
 function SelectionBox(props: { selectedElement: Node }) {
@@ -1261,6 +1038,11 @@ function SelectionBoxChild(props: { selectedNode: Node }) {
       }}
     ></div>
   )
+}
+
+function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource) {
+  const fileNameNormalized = normalizePath(fileName)
+  return `vscode://file${fileNameNormalized}:${lineNumber}:${columnNumber}`
 }
 
 const htmlTags = [
