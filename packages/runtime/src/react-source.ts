@@ -32,14 +32,41 @@ export function getReactFiber(element: Node) {
   return domFiber
 }
 
-export function nodeIsComponentRoot(element: Node): element is HTMLElement {
-  const fiber = getReactFiber(element)
+export function nodeIsComponentRoot(node: Node): node is HTMLElement {
+  const fiber = getReactFiber(node)
 
   if (!fiber?._debugOwner || !fiber?.return) {
     return false
   }
 
-  return element instanceof HTMLElement && fiber.return === fiber._debugOwner
+  return node instanceof HTMLElement && fiber.return === fiber._debugOwner
+}
+
+export function nodeGetReactRoot(node: Node): Element | null {
+  const element = node instanceof Element ? node : node.parentElement
+  if (!element) {
+    return null
+  }
+
+  const fiber = getReactFiber(element)
+  if (!fiber) {
+    return null
+  }
+
+  let result = fiber
+  while (result._debugOwner) {
+    result = result._debugOwner
+  }
+
+  if (
+    !result.child?.stateNode ||
+    !(result.child.stateNode instanceof Element)
+  ) {
+    console.warn(`couldn't find react root`)
+    return document.body
+  }
+
+  return result.child.stateNode
 }
 
 export const fiberTags = {

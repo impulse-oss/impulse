@@ -2,7 +2,6 @@ import * as t from '@babel/types'
 import animatedScrollTo from 'animated-scroll-to'
 import {
   Action,
-  KBarAnimator,
   KBarContext,
   KBarPortal,
   KBarPositioner,
@@ -15,31 +14,21 @@ import {
   VisualState,
 } from 'kbar'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import {
-  isNotEmptyNode,
-  JSXNode,
-  transformNodeInCode,
-  writeTransformationResultToFile,
-} from './ast'
+import { transformNodeInCode } from './ast'
 import { ClassEditor, useClassEditor } from './class-editor'
-import {
-  elementGetAbsolutePosition,
-  observeNode,
-  waitForAnyNodeMutation,
-} from './dom'
+import { elementGetAbsolutePosition, observeNode } from './dom'
 import { normalizePath, useDirHandle } from './fs'
 import { warn } from './logger'
-import { ElementNavbar } from './navbar'
+import { NavTreePanel } from './nav-tree'
 import {
   elementGetOwnerWithSource,
   Fiber,
   FiberSource,
   getReactFiber,
-  nodeIsComponentRoot,
+  nodeGetReactRoot,
 } from './react-source'
 import { TailwindClasses, useTailwind } from './tailwind'
 import { makeTransformers } from './transformers'
-import { undoLatestChange } from './undo'
 import { useAtomGetter } from './useAtomGetter'
 
 declare global {
@@ -70,22 +59,13 @@ export function ImpulseRoot(props: ImpulseParams) {
     >
       <style>{`
       .theme-solarized-light {
-        --theme-color-base03: 0 43 54;
-        --theme-color-base02: 7 54 66;
-        --theme-color-base01: 88 110 117;
-        --theme-color-base00: 101 123 131;
-        --theme-color-base0: 131 148 150;
-        --theme-color-base1: 147 161 161;
-        --theme-color-base2: 238 232 213;
-        --theme-color-base3: 253 246 227;
-        --theme-color-yellow: 223 202 136;
-        --theme-color-orange: 203 45 0;
-        --theme-color-red: 220 50 50;
-        --theme-color-magenta: 211 47 47;
-        --theme-color-violet: 108 113 117;
+        --theme-color-content: 88 110 117;
+        --theme-color-content-opaque: 131 148 150;
+        --theme-color-bg-highlight: 238 232 213;
+        --theme-color-bg: 253 246 227;
+        --theme-color-accent: 223 202 136;
         --theme-color-blue: 38 139 210;
-        --theme-color-cyan: 42 161 152;
-        --theme-color-green: 133 153 0;
+        --theme-color-red: 220 50 47;
       }
       `}</style>
       <KBarProvider
@@ -100,10 +80,10 @@ export function ImpulseRoot(props: ImpulseParams) {
             className="impulse-styles theme-solarized-light"
             style={{ zIndex: 10200 }}
           >
-            <div className="w-full max-w-xl overflow-hidden text-theme-base01 bg-theme-base3 text-base shadow-lg border">
+            <div className="w-full max-w-xl overflow-hidden text-theme-content bg-theme-bg text-base shadow-lg border">
               <div className="px-2 pt-2 font-sans">
                 <KBarSearch
-                  className="w-full box-border outline-0 m-0 bg-theme-base2 border border-theme-yellow outline-none text-theme-base01 px-1 py-px selection:bg-theme-yellow/50"
+                  className="w-full box-border outline-0 m-0 bg-theme-bg-highlight border border-theme-accent outline-none px-1 py-px selection:bg-theme-accent/50"
                   defaultPlaceholder="Start typing..."
                 />
               </div>
@@ -148,6 +128,11 @@ function ImpulseApp(props: ImpulseParams) {
     selectedElement: Node,
     parameters?: { indexInsideParent?: number },
   ) => {
+    const reactRoot = nodeGetReactRoot(selectedElement)
+    if (!reactRoot || !reactRoot.contains(selectedElement)) {
+      return
+    }
+
     const parentElement = selectedElement.parentElement
     if (!parentElement) {
       return setSelectionState({ type: 'elementNotSelected' })
@@ -213,15 +198,15 @@ function ImpulseApp(props: ImpulseParams) {
 
   const { query: kbarQuery } = useKBar()
 
-  const navbarRef = useRef<HTMLDivElement>(null)
+  const navtreeRef = useRef<HTMLDivElement>(null)
   const originalBodyPaddingBottom = useRef('')
 
   useEffect(() => {
-    if (selectionState.type === 'elementSelected' && navbarRef.current) {
+    if (selectionState.type === 'elementSelected' && navtreeRef.current) {
       originalBodyPaddingBottom.current = window.getComputedStyle(
         document.body,
       ).paddingBottom
-      document.body.style.paddingBottom = `${navbarRef.current.offsetHeight}px`
+      document.body.style.paddingBottom = `${navtreeRef.current.offsetHeight}px`
       return
     }
 
@@ -512,7 +497,7 @@ function ImpulseApp(props: ImpulseParams) {
   })
 
   return (
-    <div>
+    <div className="selection:bg-theme-accent/50 font-sans text-base text-theme-content">
       {selectionState.type === 'elementSelected' && (
         <>
           <SelectionBox selectedElement={selectionState.selectedNode} />
@@ -537,10 +522,20 @@ function ImpulseApp(props: ImpulseParams) {
               <SelectionBoxChild key={idx} selectedNode={child} />
             ),
           )}
-          <ElementNavbar
-            ref={navbarRef}
+          <NavTreePanel
+            rootRef={navtreeRef}
             selectedNode={selectionState.selectedNode}
-            onNodeClick={setSelectedNode}
+            onNodeClick={(navTreeNode) => {
+              switch (navTreeNode.type) {
+                case 'dom': {
+                  setSelectedNode(navTreeNode.domNode)
+                  return
+                }
+              }
+            }}
+            onCloseClick={() => {
+              removeElementSelection()
+            }}
           />
         </>
       )}
@@ -924,14 +919,14 @@ function CommandBarResults() {
       onRender={({ item, active }) =>
         typeof item === 'string' ? (
           <div className=" uppercase text-xs pt-2">
-            <span className="flex items-center w-full h-6 px-2 bg-theme-base2">
+            <span className="flex items-center w-full h-6 px-2 bg-theme-bg-highlight">
               {item}
             </span>
           </div>
         ) : (
           <div
             className={`flex justify-between px-2 ${
-              active ? 'bg-theme-yellow' : ''
+              active ? 'bg-theme-accent' : ''
             }`}
           >
             <div>{item.name}</div>
@@ -954,7 +949,7 @@ function CommandBarResults() {
                   return keyElements.map((keyElement, idx) => (
                     <span
                       key={keyElement + idxItem + idx}
-                      className={`w-5 text-center uppercase font-mono bg-theme-base2/90 h-5 inline rounded-md ${
+                      className={`w-5 text-center uppercase font-mono bg-theme-bg-highlight/90 h-5 inline rounded-md ${
                         !!symbolReplaceMap[keyElement]
                           ? 'text-lg leading-5'
                           : 'text-xs py-1 leading-4'
@@ -981,9 +976,8 @@ function SelectionBox(props: { selectedElement: Node }) {
 
   return (
     <div
-      className="pointer-events-none absolute z-[10000]"
+      className="pointer-events-none absolute z-[10000] outline outline-2 outline-theme-blue"
       style={{
-        outline: '2px solid #0399FF',
         ...absolutePosition,
       }}
     ></div>
@@ -1010,9 +1004,8 @@ function SelectionBoxSibling(props: { selectedElement: Node }) {
 
   return (
     <div
-      className="pointer-events-none absolute"
+      className="pointer-events-none absolute outline outline-1 outline-theme-blue"
       style={{
-        outline: '1px solid #0399FF',
         ...absolutePosition,
       }}
     ></div>

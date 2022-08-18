@@ -1,4 +1,4 @@
-import { Fragment, PropsWithChildren, useState } from 'react'
+import { Fragment, PropsWithChildren, useRef, useState } from 'react'
 import logo from './logo.svg'
 import vscodeScreenshot from './vscode-cmdp.png'
 import { ImpulseRoot } from '../../src/app'
@@ -10,6 +10,7 @@ import { ClassEditorView } from '../../src/class-editor'
 
 // @ts-ignore
 import tailwindConfig from 'tailwind.config.js'
+import { NavTreePanelView } from '../../src/nav-tree'
 
 // if (process.env.NODE_ENV === "development") {
 //   import("../../dist/impulse.es.mjs").then((impulse) => impulse.run());
@@ -29,9 +30,10 @@ function App() {
         tailwindConfig={tailwindConfig}
       />
 
-      {/* <RestaurantPage /> */}
-      <ClassEditorPlayground />
       {/* <Playground /> */}
+      {/* <RestaurantPage /> */}
+      {/* <ClassEditorPlayground /> */}
+      <NavTreePlayground />
     </div>
   )
 }
@@ -174,7 +176,7 @@ function RestaurantPage() {
             </div>
           </div>
         </div>
-        <h1 className="text-yellow-700">ChaCha</h1>
+        <h1 className="text-accent-700">ChaCha</h1>
         <div className="py-4 px-5 bg-[#CCFFCB]">
           <div className="text-lg font-medium">
             Do you have food preferences?
@@ -258,6 +260,25 @@ function ClassEditorPlayground() {
         src={vscodeScreenshot}
         alt="logo"
       />
+    </div>
+  )
+}
+
+function NavTreePlayground() {
+  const [ref, setRef] = useState<HTMLDivElement | null>(null)
+
+  return (
+    <div ref={setRef} className="flex justify-center">
+      <div className="m-8 theme-solarized-light w-2/3 h-[300px] font-sans text-base text-theme-content">
+        {ref && (
+          <NavTreePanelView
+            rootRef={() => {}}
+            selectedNode={ref}
+            onNodeClick={() => {}}
+            onCloseClick={() => {}}
+          />
+        )}
+      </div>
     </div>
   )
 }

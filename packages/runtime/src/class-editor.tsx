@@ -1,21 +1,12 @@
-import { useFloating, autoPlacement, autoUpdate } from '@floating-ui/react-dom'
-import animateScrollTo from 'animated-scroll-to'
-import { atom, PrimitiveAtom, useAtom, useSetAtom } from 'jotai'
-import {
-  CSSProperties,
-  Ref,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-import { TailwindClassDescription, TailwindClasses } from './tailwind'
-import fuzzySort from 'fuzzysort'
-import assert from 'assert'
-import { makeTransformers } from './transformers'
+import { autoPlacement, autoUpdate, useFloating } from '@floating-ui/react-dom'
 import { MinusCircleIcon, PencilIcon } from '@heroicons/react/solid'
+import animateScrollTo from 'animated-scroll-to'
+import assert from 'assert'
+import fuzzySort from 'fuzzysort'
+import { atom, PrimitiveAtom, useAtom, useSetAtom } from 'jotai'
+import { CSSProperties, Ref, useEffect, useMemo, useRef, useState } from 'react'
+import { TailwindClassDescription, TailwindClasses } from './tailwind'
+import { makeTransformers } from './transformers'
 
 const classEditorTmpClass = '__impulse__class-editor-tmp-class'
 
@@ -404,7 +395,7 @@ export function ClassEditorView(props: {
   return (
     <div
       ref={props.refs.floating}
-      className="bg-theme-base3 text-base shadow-lg border border-theme-base3"
+      className="bg-theme-bg text-base shadow-lg border border-theme-bg"
       style={{
         width: 400,
         ...props.style,
@@ -417,10 +408,10 @@ export function ClassEditorView(props: {
           })
           .join('')}}`}</style>
       )}
-      <div className="p-2 font-sans">
+      <div className="p-2">
         <input
           ref={props.refs.input}
-          className="w-full bg-theme-base2 border border-theme-yellow outline-none text-theme-base01 px-1 py-px selection:bg-theme-yellow/50"
+          className="w-full bg-theme-bg-highlight border border-theme-accent outline-none px-1 py-px selection:bg-theme-accent/50"
           type="text"
           placeholder="Search for a class..."
           value={props.inputValue}
@@ -441,8 +432,8 @@ export function ClassEditorView(props: {
               type="button"
               ref={isSelected ? props.refs.listSelectedElement : undefined}
               key={className}
-              className={`flex items-start text-theme-base01 ${
-                isSelected ? 'bg-theme-yellow' : 'hover:bg-theme-yellow/50'
+              className={`flex items-start ${
+                isSelected ? 'bg-theme-accent/75' : 'hover:bg-theme-accent/25'
               } w-full text-left px-2 overflow-x-hidden`}
               onClick={async () => {
                 props.onItemClick(className)
@@ -506,7 +497,7 @@ export function ClassEditorView(props: {
                 })()}
               </span>
               {isSelected && props.tailwindClassMatched && (
-                <div className="basis-0 whitespace-nowrap ml-2 text-sm self-center text-theme-base0">
+                <div className="basis-0 whitespace-nowrap ml-2 text-sm self-center text-theme-content-opaque">
                   {props.tailwindClassMatched.nodes
                     .map(({ prop, value }) => `${prop}: ${value};`)
                     .join(' ')}
