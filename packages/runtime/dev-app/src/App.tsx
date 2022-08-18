@@ -12,14 +12,14 @@ import { ClassEditorView } from '../../src/class-editor'
 import tailwindConfig from 'tailwind.config.js'
 import { NavTreePanelView } from '../../src/nav-tree'
 
-// if (process.env.NODE_ENV === "development") {
-//   import("../../dist/impulse.es.mjs").then((impulse) => impulse.run());
-// }
+if (process.env.NODE_ENV === "development") {
+  import("../../dist/impulse.es.mjs").then((impulse) => impulse.run());
+}
 
 function App() {
   return (
     <div className="App">
-      <ImpulseRoot
+      {/* <ImpulseRoot
         prettierConfig={{
           semi: false,
           trailingComma: 'all',
@@ -28,7 +28,7 @@ function App() {
           tabWidth: 2,
         }}
         tailwindConfig={tailwindConfig}
-      />
+      /> */}
 
       {/* <Playground /> */}
       {/* <RestaurantPage /> */}
