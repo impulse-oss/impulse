@@ -14,7 +14,18 @@ export type Fiber = {
   memoizedProps?: { [key: string]: unknown }
   _debugSource?: FiberSource
   _debugOwner?: Fiber
-  elementType: string | Function
+  elementType: string | Function | ElementTypeProvider
+}
+
+export type ElementTypeProvider = {
+  $$typeof: Symbol
+  _context: {
+    Consumer: unknown
+    Provider: unknown
+  }
+  render?: Function & {
+    displayName?: string
+  }
 }
 
 export function getReactFiber(element: Node) {
@@ -42,7 +53,7 @@ export function nodeIsComponentRoot(node: Node): node is HTMLElement {
   return node instanceof HTMLElement && fiber.return === fiber._debugOwner
 }
 
-export function nodeGetReactRoot(node: Node): Element | null {
+export function nodeGetReactRoot(node: Node) {
   const element = node instanceof Element ? node : node.parentElement
   if (!element) {
     return null
@@ -58,15 +69,7 @@ export function nodeGetReactRoot(node: Node): Element | null {
     result = result._debugOwner
   }
 
-  if (
-    !result.child?.stateNode ||
-    !(result.child.stateNode instanceof Element)
-  ) {
-    console.warn(`couldn't find react root`)
-    return document.body
-  }
-
-  return result.child.stateNode
+  return result
 }
 
 export const fiberTags = {

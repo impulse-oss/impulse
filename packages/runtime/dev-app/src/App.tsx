@@ -1,4 +1,4 @@
-import { Fragment, PropsWithChildren, useRef, useState } from 'react'
+import { Fragment, PropsWithChildren, useState } from 'react'
 import logo from './logo.svg'
 import vscodeScreenshot from './vscode-cmdp.png'
 import { ImpulseRoot } from '../../src/app'
@@ -12,14 +12,14 @@ import { ClassEditorView } from '../../src/class-editor'
 import tailwindConfig from 'tailwind.config.js'
 import { NavTreePanelView } from '../../src/nav-tree'
 
-if (process.env.NODE_ENV === "development") {
-  import("../../dist/impulse.es.mjs").then((impulse) => impulse.run());
-}
+// if (process.env.NODE_ENV === "development") {
+//   import("../../dist/impulse.es.mjs").then((impulse) => impulse.run());
+// }
 
 function App() {
   return (
     <div className="App">
-      {/* <ImpulseRoot
+      <ImpulseRoot
         prettierConfig={{
           semi: false,
           trailingComma: 'all',
@@ -28,7 +28,8 @@ function App() {
           tabWidth: 2,
         }}
         tailwindConfig={tailwindConfig}
-      /> */}
+        config={{editorLinkSchema: 'neovide'}}
+      />
 
       {/* <Playground /> */}
       {/* <RestaurantPage /> */}
@@ -41,7 +42,7 @@ function App() {
 function Playground() {
   const [count, setCount] = useState(0)
   return (
-    <header className="grid grid-cols-2 gap-4 p-8">
+    <header className="p-8 grid grid-cols-2 gap-4">
       <Section title="Image">
         <img src={logo} alt="logo" className="w-40" />
         <div>second element</div>
@@ -168,7 +169,7 @@ function RestaurantPage() {
           className="h-40 p-5"
           style={{ backgroundImage: `url(${headerImgUrl})` }}
         >
-          <div className="h-10 w-10 bg-white rounded-full flex justify-center items-center">
+          <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full">
             <div className="w-1/2 flex flex-col justify-between h-[38%]">
               <div className="border border-black rounded-full"></div>
               <div className="border border-black rounded-full"></div>
@@ -181,7 +182,7 @@ function RestaurantPage() {
           <div className="text-lg font-medium">
             Do you have food preferences?
           </div>
-          <div className="flex gap-4 mt-2">
+          <div className="flex mt-2 gap-4">
             <div className="text-center">
               <div>
                 <div className="w-[72px] h-[72px] border-[#AFAFAF] rounded-full border-4 flex p-2">
@@ -195,15 +196,15 @@ function RestaurantPage() {
               the menu to the ones that suit you best
             </div>
           </div>
-          <button className="mt-2 w-full text-white py-3 text-lg font-bold rounded-lg bg-green-700">
+          <button className="w-full py-3 mt-2 text-lg font-bold text-white bg-green-700 rounded-lg">
             Adapt the Menu
           </button>
         </div>
         <div className="mt-6 h-12 bg-[#dadada] flex px-5 pt-2">
-          <div className="grow shrink-0 basis-0 flex justify-center items-center">
+          <div className="flex items-center justify-center grow shrink-0 basis-0">
             OnSiteOrder
           </div>
-          <div className="bg-white rounded-t-lg grow shrink-0 basis-0 text-center flex justify-center items-center">
+          <div className="flex items-center justify-center text-center bg-white rounded-t-lg grow shrink-0 basis-0">
             Delivery
           </div>
         </div>
@@ -216,44 +217,7 @@ function ClassEditorPlayground() {
   return (
     <div className="flex">
       <div className="m-8 theme-solarized-light">
-        <ClassEditorView
-          refs={{
-            floating: () => {},
-            listContainer: () => {},
-            listSelectedElement: () => {},
-            input: () => {},
-          }}
-          style={{}}
-          tailwindClassMatched={undefined}
-          inputValue="foo"
-          inputOnChange={() => {}}
-          tailwindClassCandidates={[
-            'class-1',
-            'class-2',
-            'class-3',
-            'class-4',
-            'class-5',
-            'class-6',
-            'class-7-very-long-name-that-spans-two-lines',
-            'class-8',
-            'class-9',
-            'class-10',
-          ]}
-          selectedKey={'class-2'}
-          onItemClick={() => {}}
-          existingClasses={['class-6']}
-          classesToReplace={['class-6']}
-          tailwindClasses={{
-            'class-4': {
-              nodes: [
-                {
-                  prop: 'color',
-                  value: 'red',
-                },
-              ],
-            },
-          }}
-        />
+        <FakeClassEditorView />
       </div>
       <img
         className="max-w-[600px] object-contain"
@@ -264,18 +228,64 @@ function ClassEditorPlayground() {
   )
 }
 
+function FakeClassEditorView(props: { selectedNode?: Node }) {
+  return (
+    <ClassEditorView
+      refs={{
+        listContainer: () => {},
+        listSelectedElement: () => {},
+        input: () => {},
+      }}
+      selectedNode={props.selectedNode}
+      style={{}}
+      tailwindClassMatched={undefined}
+      classEditorState={{ type: 'active', inputValue: '', inputFocused: true }}
+      inputOnChange={() => {}}
+      inputOnFocus={() => {}}
+      inputOnBlur={() => {}}
+      tailwindClassCandidates={[
+        'class-1',
+        'class-2',
+        'class-3',
+        'class-4',
+        'class-5',
+        'class-6',
+        'class-7-very-long-name-that-spans-two-lines',
+        'class-8',
+        'class-9',
+        'class-10',
+      ]}
+      selectedKey={'class-2'}
+      onItemClick={() => {}}
+      existingClasses={['class-6']}
+      classesToReplace={['class-6']}
+      tailwindClasses={{
+        'class-4': {
+          nodes: [
+            {
+              prop: 'color',
+              value: 'red',
+            },
+          ],
+        },
+      }}
+    />
+  )
+}
+
 function NavTreePlayground() {
   const [ref, setRef] = useState<HTMLDivElement | null>(null)
 
   return (
     <div ref={setRef} className="flex justify-center">
-      <div className="m-8 theme-solarized-light w-2/3 h-[300px] font-sans text-base text-theme-content">
+      <div className="w-2/3 m-8 font-sans text-base theme-solarized-light text-theme-content">
         {ref && (
           <NavTreePanelView
             rootRef={() => {}}
             selectedNode={ref}
             onNodeClick={() => {}}
             onCloseClick={() => {}}
+            sidePanel={<FakeClassEditorView selectedNode={ref} />}
           />
         )}
       </div>

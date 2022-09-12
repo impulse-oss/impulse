@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Subject } from 'rxjs'
+import { Observable, Subject } from 'rxjs'
 
 export function useSubject<T>() {
   const subjectRef = useRef<Subject<T>>()
@@ -15,4 +15,11 @@ export function useSubject<T>() {
   }, [])
 
   return subjectRef.current!
+}
+
+export function useObservable<T>(observable: Observable<T>, fn: (value: T) => void) {
+  useEffect(() => {
+    const sub = observable.subscribe(fn)
+    return () => sub.unsubscribe()
+  }, [observable])
 }

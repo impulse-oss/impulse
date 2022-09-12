@@ -13,7 +13,7 @@ import {
   useRegisterActions,
   VisualState,
 } from 'kbar'
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { transformNodeInCode } from './ast'
 import { ClassEditor, useClassEditor } from './class-editor'
 import { elementGetAbsolutePosition, observeNode } from './dom'
@@ -80,10 +80,10 @@ export function ImpulseRoot(props: ImpulseParams) {
             className="impulse-styles theme-solarized-light"
             style={{ zIndex: 10200 }}
           >
-            <div className="w-full max-w-xl overflow-hidden text-theme-content bg-theme-bg text-base shadow-lg border">
+            <div className="w-full max-w-xl overflow-hidden text-base border shadow-lg text-theme-content bg-theme-bg">
               <div className="px-2 pt-2 font-sans">
                 <KBarSearch
-                  className="w-full box-border outline-0 m-0 bg-theme-bg-highlight border border-theme-accent outline-none px-1 py-px selection:bg-theme-accent/50"
+                  className="w-full px-1 py-px m-0 border outline-none box-border outline-0 bg-theme-bg-highlight border-theme-accent selection:bg-theme-accent/50"
                   defaultPlaceholder="Start typing..."
                 />
               </div>
@@ -95,12 +95,6 @@ export function ImpulseRoot(props: ImpulseParams) {
     </div>
   )
 }
-
-const ImpulseAppContext = createContext<{
-  selectedElement: Element | null
-  __rerenderValue: number
-  rerender: () => void
-}>({ __rerenderValue: 0, selectedElement: null, rerender: () => {} })
 
 export type SelectionState =
   | {
@@ -116,7 +110,9 @@ export type SelectionState =
 export type ImpulseParams = {
   prettierConfig?: any
   tailwindConfig?: any
-  config?: {}
+  config?: {
+    editorLinkSchema?: string
+  }
 }
 
 function ImpulseApp(props: ImpulseParams) {
@@ -128,8 +124,8 @@ function ImpulseApp(props: ImpulseParams) {
     selectedElement: Node,
     parameters?: { indexInsideParent?: number },
   ) => {
-    const reactRoot = nodeGetReactRoot(selectedElement)
-    if (!reactRoot || !reactRoot.contains(selectedElement)) {
+    const elementIsPartOfReactTree = !!nodeGetReactRoot(selectedElement)
+    if (!elementIsPartOfReactTree) {
       return
     }
 
@@ -332,7 +328,7 @@ function ImpulseApp(props: ImpulseParams) {
       }
 
       const classEditorState = classEditorStateGetter()
-      if (classEditorState.type === 'active') {
+      if (classEditorState.type === 'active' && classEditorState.inputFocused) {
         return
       }
 
@@ -497,7 +493,7 @@ function ImpulseApp(props: ImpulseParams) {
   })
 
   return (
-    <div className="selection:bg-theme-accent/50 font-sans text-base text-theme-content">
+    <div className="font-sans text-base selection:bg-theme-accent/50 text-theme-content">
       {selectionState.type === 'elementSelected' && (
         <>
           <SelectionBox selectedElement={selectionState.selectedNode} />
@@ -525,42 +521,49 @@ function ImpulseApp(props: ImpulseParams) {
           <NavTreePanel
             rootRef={navtreeRef}
             selectedNode={selectionState.selectedNode}
-            onNodeClick={(navTreeNode) => {
-              switch (navTreeNode.type) {
-                case 'dom': {
-                  setSelectedNode(navTreeNode.domNode)
-                  return
-                }
+            onNodeClick={(nodeFiber) => {
+              if (nodeFiber instanceof Node) {
+                setSelectedNode(nodeFiber)
+                return
               }
+              if (typeof nodeFiber.elementType !== 'string') {
+                return
+              }
+
+              setSelectedNode(nodeFiber.stateNode!)
+              return
             }}
             onCloseClick={() => {
               removeElementSelection()
             }}
+            {...{
+              tailwindClasses,
+              transformers,
+              rerender,
+            }}
+            sidePanel={
+              <ClassEditor
+                selectedNode={selectionState.selectedNode}
+                {...classEditor}
+                {...{
+                  tailwindClasses,
+                  transformers,
+                  rerender,
+                }}
+              />
+            }
           />
         </>
       )}
       <CommandBarController
         prettierConfig={props.prettierConfig}
+        editorLinkSchema={props.config?.editorLinkSchema ?? 'vscode'}
         {...{
           getDirHandle,
           selectionState,
           classEditor,
           tailwindClasses,
           transformers,
-        }}
-      />
-
-      <ClassEditor
-        selectedNode={
-          selectionState.type === 'elementSelected'
-            ? selectionState.selectedNode
-            : undefined
-        }
-        {...classEditor}
-        {...{
-          tailwindClasses,
-          transformers,
-          rerender,
         }}
       />
 
@@ -571,6 +574,7 @@ function ImpulseApp(props: ImpulseParams) {
 
 function CommandBarController(props: {
   prettierConfig?: any
+  editorLinkSchema: string
   getDirHandle: ReturnType<typeof useDirHandle>['getDirHandle']
   selectionState: SelectionState
   classEditor: ReturnType<typeof useClassEditor>
@@ -581,8 +585,8 @@ function CommandBarController(props: {
     getDirHandle,
     selectionState,
     classEditor,
-    tailwindClasses,
     transformers,
+    editorLinkSchema,
   } = props
 
   const { searchQuery } = useKBar((state) => {
@@ -596,7 +600,7 @@ function CommandBarController(props: {
     const source = fiber?._debugSource
 
     if (selectedNode instanceof Element && source) {
-      const vscodeLink = makeVscodeLink(source)
+      const vscodeLink = makeVscodeLink(source, editorLinkSchema)
       window.open(vscodeLink)
       return
     }
@@ -625,11 +629,14 @@ function CommandBarController(props: {
         ? targetJsxNode.openingElement.loc?.start ?? targetJsxNode.loc.start
         : targetJsxNode.loc.end
 
-    const vscodeLink = makeVscodeLink({
-      fileName: transformResult.file.path,
-      lineNumber: loc.line,
-      columnNumber: loc.column + 1,
-    })
+    const vscodeLink = makeVscodeLink(
+      {
+        fileName: transformResult.file.path,
+        lineNumber: loc.line,
+        columnNumber: loc.column + 1,
+      },
+      editorLinkSchema,
+    )
     window.open(vscodeLink)
 
     return
@@ -653,14 +660,12 @@ function CommandBarController(props: {
       return
     }
 
-    const vscodeLink = makeVscodeLink(source)
+    const vscodeLink = makeVscodeLink(source, editorLinkSchema)
     window.open(vscodeLink)
     return
   }
 
   const {
-    addClass,
-    removeClass,
     removeNode,
     insertBeforeNode,
     insertAfterNode,
@@ -884,15 +889,15 @@ function CommandBarController(props: {
       perform: () =>
         selectionState.type === 'elementSelected' && tryToUndoLatestChange(),
     },
-    toggleClassEditor: {
+    jumpToClassEditor: {
       showIf:
         selectionState.type === 'elementSelected' &&
         selectionState.selectedNode instanceof Element,
       section: sections.general,
-      name: 'Toggle class editor',
+      name: 'Jump to class editor',
       shortcut: ['KeyE'],
       perform: () => {
-        classEditor.toggle()
+        classEditor.focus$.next()
       },
     },
   }
@@ -918,7 +923,7 @@ function CommandBarResults() {
       items={results}
       onRender={({ item, active }) =>
         typeof item === 'string' ? (
-          <div className=" uppercase text-xs pt-2">
+          <div className="pt-2 text-xs uppercase">
             <span className="flex items-center w-full h-6 px-2 bg-theme-bg-highlight">
               {item}
             </span>
@@ -930,7 +935,7 @@ function CommandBarResults() {
             }`}
           >
             <div>{item.name}</div>
-            <div className="flex gap-1 items-center">
+            <div className="flex items-center gap-1">
               {item.shortcut &&
                 item.shortcut.length > 0 &&
                 item.shortcut.map((key, idxItem) => {
@@ -984,27 +989,13 @@ function SelectionBox(props: { selectedElement: Node }) {
   )
 }
 
-function SelectionBoxParent(props: { selectedElement: Node }) {
-  const { selectedElement } = props
-  const absolutePosition = elementGetAbsolutePosition(selectedElement)
-
-  return (
-    <div
-      className="pointer-events-none absolute bg-[#00ff0033]"
-      style={{
-        ...absolutePosition,
-      }}
-    ></div>
-  )
-}
-
 function SelectionBoxSibling(props: { selectedElement: Node }) {
   const { selectedElement } = props
   const absolutePosition = elementGetAbsolutePosition(selectedElement)
 
   return (
     <div
-      className="pointer-events-none absolute outline outline-1 outline-theme-blue"
+      className="absolute pointer-events-none outline outline-1 outline-theme-blue"
       style={{
         ...absolutePosition,
       }}
@@ -1033,9 +1024,12 @@ function SelectionBoxChild(props: { selectedNode: Node }) {
   )
 }
 
-function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource) {
+function makeVscodeLink(
+  { fileName, lineNumber, columnNumber }: FiberSource,
+  schema: string,
+) {
   const fileNameNormalized = normalizePath(fileName)
-  return `vscode://file${fileNameNormalized}:${lineNumber}:${columnNumber}`
+  return `${schema}://file${fileNameNormalized}:${lineNumber}:${columnNumber}`
 }
 
 const htmlTags = [

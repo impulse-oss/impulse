@@ -1,93 +1,62 @@
-import { autoPlacement, autoUpdate, useFloating } from '@floating-ui/react-dom'
-import { MinusCircleIcon, PencilIcon } from '@heroicons/react/solid'
+import {
+  ChevronDoubleRightIcon,
+  MinusCircleIcon,
+  PencilIcon,
+} from '@heroicons/react/solid'
 import animateScrollTo from 'animated-scroll-to'
-import assert from 'assert'
 import fuzzySort from 'fuzzysort'
-import { atom, PrimitiveAtom, useAtom, useSetAtom } from 'jotai'
+import { atom, PrimitiveAtom, useAtom } from 'jotai'
 import { CSSProperties, Ref, useEffect, useMemo, useRef, useState } from 'react'
+import { Observable } from 'rxjs'
+import { elementGetAbsolutePosition } from './dom'
+import { useObservable, useSubject } from './event'
 import { TailwindClassDescription, TailwindClasses } from './tailwind'
 import { makeTransformers } from './transformers'
 
 const classEditorTmpClass = '__impulse__class-editor-tmp-class'
 
-export type ClassEditorState = ClassEditorStateActive | ClassEditorStateOff
+export type ClassEditorState = ClassEditorStateActive
 export type ClassEditorStateActive = {
   type: 'active'
   inputValue: string
-}
-export type ClassEditorStateOff = {
-  type: 'off'
+  inputFocused: boolean
 }
 
 export function useClassEditor() {
   const stateAtomRef = useRef(
     atom<ClassEditorState>({
-      type: 'off',
+      type: 'active',
+      inputValue: '',
+      inputFocused: false,
     }),
   )
 
-  const setState = useSetAtom(stateAtomRef.current)
-
-  const toggle = () => {
-    setState((state) => {
-      if (state.type === 'off') {
-        return {
-          type: 'active',
-          inputValue: '',
-        }
-      }
-
-      return {
-        type: 'off',
-      }
-    })
-  }
+  const focus$ = useSubject<void>()
 
   return {
     stateAtom: stateAtomRef.current,
-    toggle,
+    focus$,
   }
 }
 
 type ClassEditorProps = {
   selectedNode?: Node
   stateAtom: PrimitiveAtom<ClassEditorState>
+  focus$: Observable<void>
   tailwindClasses: TailwindClasses
   transformers: ReturnType<typeof makeTransformers>
   rerender: () => void
 }
 
-export function ClassEditor(props: ClassEditorProps) {
-  const [state] = useAtom(props.stateAtom)
-
-  if (state.type === 'off') {
-    return null
-  }
-
-  return <ClassEditorActive {...props} />
-}
-
-export function ClassEditorActive({
+export function ClassEditor({
   selectedNode,
   stateAtom,
+  focus$,
   tailwindClasses,
   transformers,
   rerender,
 }: ClassEditorProps) {
   const [state, setState] = useAtom(stateAtom)
-  assert(state.type === 'active')
-
-  const floatingUi = useFloating({
-    whileElementsMounted: autoUpdate,
-    middleware: [autoPlacement()],
-  })
-
-  useEffect(() => {
-    if (selectedNode instanceof HTMLElement) {
-      floatingUi.reference(selectedNode)
-      return
-    }
-  }, [selectedNode])
 
   useEffect(() => {
     if (!(selectedNode instanceof HTMLElement)) {
@@ -105,34 +74,6 @@ export function ClassEditorActive({
 
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const closeClassEditor = () => {
-    setState({
-      type: 'off',
-    })
-  }
-
-  useEffect(() => {
-    if (!inputRef.current) {
-      return
-    }
-
-    inputRef.current.focus({ preventScroll: true })
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeClassEditor()
-      }
-    }
-
-    inputRef.current.addEventListener('keydown', onKeyDown)
-    // inputRef.current.addEventListener('blur', onBlur)
-
-    return () => {
-      inputRef.current?.removeEventListener('keydown', onKeyDown)
-      // inputRef.current?.removeEventListener('blur', onBlur)
-    }
-  }, [inputRef.current])
-
   const tailwindClassesArray = useMemo(
     () => Object.keys(tailwindClasses),
     [tailwindClasses],
@@ -146,7 +87,7 @@ export function ClassEditorActive({
       : []
 
   const fuzzyMatches = useMemo(() => {
-    return fuzzySort.go(
+    const matches = fuzzySort.go(
       state.inputValue,
       Object.entries(tailwindClasses).map(([className, props]) => ({
         fullSearchString: `${className} ${props.nodes
@@ -161,6 +102,18 @@ export function ClassEditorActive({
         threshold: -50000,
       },
     )
+
+    if (matches.length === 0) {
+      return [
+        {
+          target: state.inputValue,
+          score: 0,
+          obj: { className: state.inputValue },
+        },
+      ]
+    }
+
+    return matches
   }, [state.inputValue])
 
   const tailwindClassCandidates =
@@ -228,13 +181,16 @@ export function ClassEditorActive({
 
   // reset selection to the first item each time the input value changes
   useEffect(() => {
+    if (!state.inputFocused) {
+      return
+    }
     const selectedKey =
       tailwindClassCandidates.length > 0 ? tailwindClassCandidates[0] : null
 
     setListSelectionState({
       selectedKey,
     })
-  }, [state.inputValue])
+  }, [state.inputValue, state.inputFocused])
 
   const onClassSelected = async (className: string) => {
     if (!(selectedNode instanceof Element)) {
@@ -247,10 +203,10 @@ export function ClassEditorActive({
       await transformers.addClass(selectedNode, className, classesToReplace)
     }
 
-    setState({
-      type: 'active',
+    setState((prev) => ({
+      ...prev,
       inputValue: '',
-    })
+    }))
   }
 
   useEffect(() => {
@@ -259,6 +215,16 @@ export function ClassEditorActive({
     }
 
     const onKeyDown = async (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setState((prev) => ({
+          ...prev,
+          inputValue: '',
+        }))
+        inputRef.current?.blur()
+        return
+      }
+
       const selectedKey = listSelectionState.selectedKey
       if (!selectedKey) {
         return
@@ -300,6 +266,10 @@ export function ClassEditorActive({
     }
   }, [inputRef.current, listSelectionState, classesToReplace])
 
+  useObservable(focus$, () => {
+    inputRef.current?.focus()
+  })
+
   const listContainerRef = useRef<HTMLDivElement>(null)
   const listSelectedElementRef = useRef<HTMLButtonElement>(null)
 
@@ -326,10 +296,6 @@ export function ClassEditorActive({
   ])
 
   useEffect(() => {
-    floatingUi.update()
-  }, [tailwindClassMatched])
-
-  useEffect(() => {
     rerender()
   }, [listSelectionState])
 
@@ -339,14 +305,9 @@ export function ClassEditorActive({
         input: inputRef,
         listContainer: listContainerRef,
         listSelectedElement: listSelectedElementRef,
-        floating: floatingUi.floating,
       }}
-      style={{
-        position: floatingUi.strategy ?? 'absolute',
-        top: floatingUi.y ?? 0,
-        left: floatingUi.x ?? 0,
-      }}
-      inputValue={state.inputValue}
+      selectedNode={selectedNode}
+      classEditorState={state}
       inputOnChange={(value) => {
         setState((state) => {
           return {
@@ -354,6 +315,12 @@ export function ClassEditorActive({
             inputValue: value,
           }
         })
+      }}
+      inputOnFocus={() => {
+        setState((prev) => ({ ...prev, inputFocused: true }))
+      }}
+      inputOnBlur={() => {
+        setState((prev) => ({ ...prev, inputFocused: false }))
       }}
       selectedKey={listSelectionState.selectedKey}
       onItemClick={(className) => {
@@ -376,15 +343,17 @@ export function ClassEditorActive({
 
 export function ClassEditorView(props: {
   refs: {
-    floating: (node: HTMLElement | null) => void
     input: Ref<HTMLInputElement>
     listContainer: Ref<HTMLDivElement>
     listSelectedElement: Ref<HTMLButtonElement>
   }
+  selectedNode?: Node
   style?: CSSProperties
   tailwindClassMatched?: TailwindClassDescription
-  inputValue: string
+  classEditorState: ClassEditorState
   inputOnChange: (value: string) => void
+  inputOnFocus: () => void
+  inputOnBlur: () => void
   tailwindClassCandidates: string[]
   tailwindClasses: { [key: string]: TailwindClassDescription }
   selectedKey: string | null
@@ -392,37 +361,63 @@ export function ClassEditorView(props: {
   existingClasses: string[]
   classesToReplace: string[]
 }) {
+  const selectedClassIsExistingClass =
+    props.selectedKey && props.existingClasses.includes(props.selectedKey)
+
   return (
     <div
-      ref={props.refs.floating}
-      className="bg-theme-bg text-base shadow-lg border border-theme-bg"
+      className="h-full p-2 text-base border-l border-theme-bg-highlight"
       style={{
         width: 400,
         ...props.style,
+        opacity: props.classEditorState.inputFocused ? 1 : 0.6,
       }}
     >
-      {props.tailwindClassMatched && (
-        <style>{`.${classEditorTmpClass} {${props.tailwindClassMatched.nodes
-          .map((node) => {
-            return `${node.prop}: ${node.value};`
-          })
-          .join('')}}`}</style>
+      {props.classEditorState.inputFocused &&
+        props.tailwindClassMatched &&
+        !selectedClassIsExistingClass && (
+          <style>{`.${classEditorTmpClass} {${props.tailwindClassMatched.nodes
+            .map((node) => {
+              return `${node.prop}: ${node.value};`
+            })
+            .join('')}}`}</style>
+        )}
+      {props.selectedNode instanceof Element && (
+        <div className="pt-1 px-2 text-sm">
+          {'<'}
+          {props.selectedNode.tagName.toLowerCase()}
+          {'>'}:{' '}
+          {(() => {
+            const roundTwoDecimals = (num: number) =>
+              Math.round(num * 100) / 100
+            const { width, height } = elementGetAbsolutePosition(
+              props.selectedNode,
+            )
+            return `${roundTwoDecimals(width)}x${roundTwoDecimals(height)}`
+          })()}
+        </div>
       )}
       <div className="p-2">
         <input
           ref={props.refs.input}
-          className="w-full bg-theme-bg-highlight border border-theme-accent outline-none px-1 py-px selection:bg-theme-accent/50"
+          className="w-full px-1 py-px border outline-none bg-theme-bg-highlight border-theme-accent selection:bg-theme-accent/50"
           type="text"
           placeholder="Search for a class..."
-          value={props.inputValue}
+          value={props.classEditorState.inputValue}
           onChange={(event) => {
             props.inputOnChange(event.target.value)
+          }}
+          onFocus={() => {
+            props.inputOnFocus()
+          }}
+          onBlur={() => {
+            props.inputOnBlur()
           }}
         />
       </div>
       <div
         ref={props.refs.listContainer}
-        className="h-[200px] overflow-y-auto font-mono"
+        className="h-full overflow-y-auto font-mono"
       >
         {props.tailwindClassCandidates.map((className) => {
           const isSelected = props.selectedKey === className
@@ -480,6 +475,10 @@ export function ClassEditorView(props: {
                     )
                   }
 
+                  if (!props.tailwindClasses[className]) {
+                    return <ChevronDoubleRightIcon className="w-5" />
+                  }
+
                   return <TailwindIcon />
                 })()}
               </div>
@@ -497,7 +496,7 @@ export function ClassEditorView(props: {
                 })()}
               </span>
               {isSelected && props.tailwindClassMatched && (
-                <div className="basis-0 whitespace-nowrap ml-2 text-sm self-center text-theme-content-opaque">
+                <div className="self-center ml-2 text-sm basis-0 whitespace-nowrap text-theme-content-opaque">
                   {props.tailwindClassMatched.nodes
                     .map(({ prop, value }) => `${prop}: ${value};`)
                     .join(' ')}

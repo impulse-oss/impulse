@@ -1,37 +1,22 @@
+import { Tab } from '@headlessui/react'
 import {
   ChevronDownIcon,
   ChevronRightIcon,
   XIcon,
 } from '@heroicons/react/solid'
 import animatedScrollTo from 'animated-scroll-to'
-import assert from 'assert'
-import { Ref, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Fiber,
-  getReactFiber,
-  nodeGetReactRoot,
-  nodeIsComponentRoot,
-} from './react-source'
+import { Fragment, ReactNode, Ref, useEffect, useRef, useState } from 'react'
+import { Link } from './link'
+import { Fiber, fiberGetSiblings, nodeGetReactRoot } from './react-source'
 
-export type NavTreeNode = {
-  children: NavTreeNode[]
-} & (NavTreeNodeDom | NavTreeNodeComponent)
-
-export type NavTreeNodeDom = {
-  type: 'dom'
-  domNode: Node
-}
-
-export type NavTreeNodeComponent = {
-  type: 'component'
-  component: Fiber
-}
+export type NavTreeNode = Fiber | Node
 
 export type NavTreePanelProps = {
   rootRef: Ref<HTMLDivElement>
   selectedNode: Node
   onNodeClick: (element: NavTreeNode) => void
   onCloseClick: () => void
+  sidePanel?: ReactNode
 }
 
 export const NavTreePanel = (props: NavTreePanelProps) => {
@@ -45,11 +30,8 @@ export const NavTreePanel = (props: NavTreePanelProps) => {
   )
 }
 
-export const NavTreePanelView = (props: NavTreePanelProps) => {
+export function NavTreePanelView(props: NavTreePanelProps) {
   const root = nodeGetReactRoot(props.selectedNode)
-  const navTree = useMemo(() => {
-    return buildNavTree(root!)
-  }, [props.selectedNode])
 
   const selectedNodeContainerRef = useRef<HTMLDivElement>(null)
   const selectedNodeElementRef = useRef<HTMLDivElement>(null)
@@ -68,47 +50,96 @@ export const NavTreePanelView = (props: NavTreePanelProps) => {
   const [hoveredNodes, setHoveredNodes] = useState<NavTreeNode[]>([])
   const hoveredNode = hoveredNodes[hoveredNodes.length - 1]
 
+  const tabs = ['Element', 'About']
+
   return (
-    <div className="bg-theme-bg border-theme-accent/25 flex flex-col h-full">
-      <div className="flex shadow-md bg-theme-bg-highlight justify-between">
-        <div>
+    <Tab.Group>
+      <div className="flex flex-col h-full bg-theme-bg border-theme-accent/25">
+        <div className="flex justify-between shadow-md bg-theme-bg-highlight shrink-0">
+          <Tab.List>
+            {tabs.map((tabName) => (
+              <Tab key={tabName} as={Fragment}>
+                {({ selected }) => (
+                  <button
+                    className={
+                      'outline-none py-1 px-5 ' +
+                      (selected
+                        ? 'border-b-2 border-theme-accent bg-theme-bg'
+                        : 'hover:bg-theme-bg/40')
+                    }
+                  >
+                    {tabName}
+                  </button>
+                )}
+              </Tab>
+            ))}
+          </Tab.List>
           <button
             type="button"
-            className="bg-theme-bg p-2 border-theme-accent border-b-2 px-5"
+            className="flex items-center justify-center w-10 hover:bg-theme-bg/40"
+            onClick={() => {
+              props.onCloseClick()
+            }}
           >
-            Elements
+            <XIcon className="w-5 h-5" />
           </button>
         </div>
-        <button
-          type="button"
-          className="w-10 flex justify-center items-center"
-          onClick={() => {
-            props.onCloseClick()
-          }}
-        >
-          <XIcon className="w-5 h-5" />
-        </button>
+        <Tab.Panels>
+          <Tab.Panel className="flex h-[300px] outline-none">
+            <div
+              ref={selectedNodeContainerRef}
+              className="flex-1 p-2 overflow-auto"
+            >
+              <NavTreeFromNode
+                {...props}
+                node={root!}
+                level={0}
+                selectedNodeElementRef={selectedNodeElementRef}
+                hoveredNode={hoveredNode}
+                onNodeMouseEnter={(node) => {
+                  setHoveredNodes((nodes) => {
+                    return [...nodes, node]
+                  })
+                }}
+                onNodeMouseLeave={(node) => {
+                  setHoveredNodes((nodes) => {
+                    return nodes.filter((n) => n !== node)
+                  })
+                }}
+              />
+            </div>
+            <div className="max-w-[400px] shrink-0">{props.sidePanel}</div>
+          </Tab.Panel>
+          <Tab.Panel className="p-4">
+            <p>
+              Github:{' '}
+              <Link
+                target="_blank"
+                href="https://github.com/impulse-oss/impulse"
+              >
+                impulse-oss/impulse
+              </Link>
+            </p>
+            <p>
+              Discord:{' '}
+              <Link target="_blank" href="https://discord.gg/nDDCyyedbs">
+                Join
+              </Link>
+            </p>
+            <p className="mt-4">
+              Made by{' '}
+              <Link target="_blank" href="https://twitter.com/krogovoy">
+                @krogovoy
+              </Link>{' '}
+              and{' '}
+              <Link target="_blank" href="https://twitter.com/IVolchenskov">
+                @IVolchenskov
+              </Link>
+            </p>
+          </Tab.Panel>
+        </Tab.Panels>
       </div>
-      <div ref={selectedNodeContainerRef} className="p-2 overflow-y-auto">
-        <NavTreeFromNode
-          {...props}
-          node={navTree}
-          level={0}
-          selectedNodeElementRef={selectedNodeElementRef}
-          hoveredNode={hoveredNode}
-          onNodeMouseEnter={(node) => {
-            setHoveredNodes((nodes) => {
-              return [...nodes, node]
-            })
-          }}
-          onNodeMouseLeave={(node) => {
-            setHoveredNodes((nodes) => {
-              return nodes.filter((n) => n !== node)
-            })
-          }}
-        />
-      </div>
-    </div>
+    </Tab.Group>
   )
 }
 
@@ -135,24 +166,59 @@ export function NavTreeFromNode({
     type: 'collapsed' | 'expanded'
   }
   const state: State = (() => {
-    if (node.type !== 'dom') {
+    if (node instanceof Node) {
+      return { type: 'expanded' }
+    }
+    if (typeof node.elementType === 'function') {
       return { type: 'expanded' }
     }
 
-    if (!(node.domNode instanceof Element)) {
+    if (typeof node.elementType === 'object') {
       return { type: 'expanded' }
     }
 
-    if (node.domNode === selectedNode || node.domNode.contains(selectedNode)) {
+    const domNode = node.stateNode!
+
+    if (!(domNode instanceof Element)) {
+      return { type: 'expanded' }
+    }
+
+    if (domNode === selectedNode || domNode.contains(selectedNode)) {
       return { type: 'expanded' }
     }
 
     return { type: 'collapsed' }
   })()
-  // const [state, setState] = useState<State>(initialState)
 
-  const isSelected = node.type === 'dom' && node.domNode === selectedNode
+  const isSelected =
+    node instanceof Node
+      ? node === selectedNode
+      : node.stateNode === selectedNode
   const isHovered = node === hoveredNode
+
+  const chevron = (() => {
+    if (node instanceof Node) {
+      return <div className="w-4"></div>
+    }
+
+    const isJsxElement = typeof node.elementType === 'function' || node.tag === 11
+    const isHtmlElement =
+      typeof node.elementType === 'string' && node.stateNode instanceof Element
+
+    if (isJsxElement || isHtmlElement) {
+      return (
+        <div className="w-4 shrink-0 pt-[3px]">
+          {state.type === 'collapsed' ? (
+            <ChevronRightIcon className="w-full" />
+          ) : (
+            <ChevronDownIcon className="w-full" />
+          )}
+        </div>
+      )
+    }
+
+    return null
+  })()
 
   return (
     <div
@@ -168,16 +234,7 @@ export function NavTreeFromNode({
         onNodeMouseLeave(node)
       }}
     >
-      {(node.type === 'component' ||
-        (node.type === 'dom' && node.domNode instanceof Element)) && (
-        <div className="w-4 shrink-0 pt-[3px]">
-          {state.type === 'collapsed' ? (
-            <ChevronRightIcon className="w-full" />
-          ) : (
-            <ChevronDownIcon className="w-full" />
-          )}
-        </div>
-      )}
+      {chevron}
       <div
         ref={isSelected ? selectedNodeElementRef : null}
         className={`flex p-px ${isSelected ? 'bg-theme-accent/50' : ''} ${
@@ -187,12 +244,26 @@ export function NavTreeFromNode({
           flexDirection: state.type === 'expanded' ? 'column' : 'row',
         }}
       >
-        {node.type === 'component' ? (
-          (() => {
-            const componentName =
-              typeof node.component._debugOwner?.elementType === 'function'
-                ? node.component._debugOwner.elementType.name
-                : 'unknown'
+        {(() => {
+          // node is a text Node
+          if (node instanceof Node) {
+            return (
+              <>
+                {'"'}
+                {node.nodeValue}
+                {'"'}
+              </>
+            )
+          }
+
+          const children = node.child
+            ? fiberGetSiblings(node.child)
+            : [...(node.stateNode?.childNodes ?? [])]
+
+          // node is a React component
+          if (typeof node.elementType === 'function') {
+            const componentName = node.elementType.name ?? 'UnknownComponent'
+
             return (
               <>
                 <div className="text-theme-content-opaque">
@@ -202,7 +273,7 @@ export function NavTreeFromNode({
                 </div>
                 <div>
                   {state.type === 'expanded'
-                    ? node.children.map((child, idx) => (
+                    ? children.map((child, idx) => (
                         <NavTreeFromNode
                           key={idx}
                           node={child}
@@ -226,86 +297,131 @@ export function NavTreeFromNode({
                 </div>
               </>
             )
-          })()
-        ) : (
-          <>
-            <ElementDetails node={node.domNode} />
-            <div>
-              {state.type === 'expanded'
-                ? node.children.map((child, idx) => (
-                    <NavTreeFromNode
-                      key={idx}
-                      node={child}
-                      level={level + 4}
-                      {...{
-                        selectedNode,
-                        hoveredNode,
-                        onNodeClick,
-                        onNodeMouseEnter,
-                        onNodeMouseLeave,
-                        selectedNodeElementRef,
-                      }}
-                    />
-                  ))
-                : '...'}
-            </div>
-            {node.domNode instanceof Element && (
-              <div>
-                {'</'}
-                <b>{node.domNode.tagName.toLowerCase()}</b>
-                {'>'}
-              </div>
-            )}
-          </>
-        )}
+          }
+
+          // node is an HTML element
+          if (typeof node.elementType === 'string') {
+            return (
+              <>
+                <ElementDetails node={node.stateNode!} />
+                <div>
+                  {state.type === 'expanded'
+                    ? children.map((child, idx) => (
+                        <NavTreeFromNode
+                          key={idx}
+                          node={child}
+                          level={level + 4}
+                          {...{
+                            selectedNode,
+                            hoveredNode,
+                            onNodeClick,
+                            onNodeMouseEnter,
+                            onNodeMouseLeave,
+                            selectedNodeElementRef,
+                          }}
+                        />
+                      ))
+                    : '...'}
+                </div>
+                {node.stateNode instanceof Element && (
+                  <div>
+                    {'</'}
+                    <b>{node.stateNode.tagName.toLowerCase()}</b>
+                    {'>'}
+                  </div>
+                )}
+              </>
+            )
+          }
+
+          // node is a text Node with Fiber
+          if (node.elementType === null && node.stateNode instanceof Node) {
+            return (
+              <>
+                {'"'}
+                {node.stateNode.nodeValue!}
+                {'"'}
+              </>
+            )
+          }
+
+          // node is a forward ref
+          if (
+            node.tag === 11 &&
+            typeof node.elementType === 'object' &&
+            node.elementType.render
+          ) {
+            const componentName =
+              node.elementType.render.displayName || node.elementType.render.name || 'UnknownComponent'
+
+            return (
+              <>
+                <div className="text-theme-content-opaque">
+                  {'<'}
+                  {componentName}
+                  {'>'}
+                </div>
+                <div>
+                  {state.type === 'expanded'
+                    ? children.map((child, idx) => (
+                        <NavTreeFromNode
+                          key={idx}
+                          node={child}
+                          level={level + 4}
+                          {...{
+                            selectedNode,
+                            hoveredNode,
+                            onNodeClick,
+                            onNodeMouseEnter,
+                            onNodeMouseLeave,
+                            selectedNodeElementRef,
+                          }}
+                        />
+                      ))
+                    : '...'}
+                </div>
+                <div className="text-theme-content-opaque">
+                  {'</'}
+                  {componentName}
+                  {'>'}
+                </div>
+              </>
+            )
+          }
+
+          // node is a context provider or fragment or something else
+          if (typeof node.elementType === 'object') {
+            return (
+              <>
+                {state.type === 'expanded'
+                  ? children.map((child, idx) => (
+                      <NavTreeFromNode
+                        key={idx}
+                        node={child}
+                        level={level + 4}
+                        {...{
+                          selectedNode,
+                          hoveredNode,
+                          onNodeClick,
+                          onNodeMouseEnter,
+                          onNodeMouseLeave,
+                          selectedNodeElementRef,
+                        }}
+                      />
+                    ))
+                  : '...'}
+              </>
+            )
+          }
+          return null
+        })()}
       </div>
     </div>
   )
 }
 
-function buildNavTree(node: Node): NavTreeNode {
-  const children = Array.from(node.childNodes)
-
-  const domNode = {
-    type: 'dom',
-    domNode: node,
-    children: children.map((child) => buildNavTree(child)),
-  } as const
-
-  if (nodeIsComponentRoot(node)) {
-    return {
-      type: 'component',
-      component: getReactFiber(node)!,
-      children: [domNode],
-    }
-  }
-  return domNode
-}
-
-function nodeGetParent(node: Node, depth: number): Element {
-  assert(depth > 0)
-  const firstParent = node.parentElement
-
-  if (!firstParent) {
-    if (!(node instanceof Element)) {
-      throw new Error(`node is not an element`)
-    }
-    return node
-  }
-
-  let result = firstParent
-  for (let i = 0; i < depth - 1; i++) {
-    result = result.parentElement ?? result
-  }
-
-  return result
-}
-
 function ElementDetails(props: { node: Node }) {
   const { node } = props
-
-  const fiber = getReactFiber(node)
-  const ownerType = fiber?._debugOwner?.elementType
 
   const truncate = (str: string, maxLength: number) => {
     if (str.length <= maxLength) {
@@ -326,7 +442,24 @@ function ElementDetails(props: { node: Node }) {
       <b>{node.tagName.toLocaleLowerCase()}</b>
       {Array.from(node.attributes)
         .filter((attribute) => {
-          return attribute.name === 'class' && attribute.value !== ''
+          if (attribute.name !== 'class') {
+            return false
+          }
+
+          if (attribute.value.trim() === '') {
+            return false
+          }
+
+          const classes = attribute.value
+            .split(' ')
+            .map((x) => x.trim())
+            .filter((className) => !className.startsWith('__impulse__'))
+
+          if (classes.length === 0) {
+            return false
+          }
+
+          return true
         })
 
         .map((attribute, idx) => {
