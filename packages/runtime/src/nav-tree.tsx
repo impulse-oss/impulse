@@ -36,7 +36,7 @@ export function NavTreePanelView(props: NavTreePanelProps) {
   const selectedNodeContainerRef = useRef<HTMLDivElement>(null)
   const selectedNodeElementRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+  const scrollToSelectedElement = () => {
     if (!selectedNodeElementRef.current || !selectedNodeContainerRef.current) {
       return
     }
@@ -45,7 +45,9 @@ export function NavTreePanelView(props: NavTreePanelProps) {
       elementToScroll: selectedNodeContainerRef.current,
       verticalOffset: -selectedNodeContainerRef.current.offsetHeight * 0.25,
     })
-  }, [props.selectedNode])
+  }
+
+  useEffect(scrollToSelectedElement, [props.selectedNode])
 
   const [hoveredNodes, setHoveredNodes] = useState<NavTreeNode[]>([])
   const hoveredNode = hoveredNodes[hoveredNodes.length - 1]
@@ -53,7 +55,11 @@ export function NavTreePanelView(props: NavTreePanelProps) {
   const tabs = ['Element', 'About']
 
   return (
-    <Tab.Group>
+    <Tab.Group
+      onChange={() => {
+        setTimeout(scrollToSelectedElement, 1)
+      }}
+    >
       <div className="flex flex-col h-full bg-theme-bg border-theme-accent/25">
         <div className="flex justify-between shadow-md bg-theme-bg-highlight shrink-0">
           <Tab.List>
@@ -201,7 +207,8 @@ export function NavTreeFromNode({
       return <div className="w-4"></div>
     }
 
-    const isJsxElement = typeof node.elementType === 'function' || node.tag === 11
+    const isJsxElement =
+      typeof node.elementType === 'function' || node.tag === 11
     const isHtmlElement =
       typeof node.elementType === 'string' && node.stateNode instanceof Element
 
@@ -352,7 +359,9 @@ export function NavTreeFromNode({
             node.elementType.render
           ) {
             const componentName =
-              node.elementType.render.displayName || node.elementType.render.name || 'UnknownComponent'
+              node.elementType.render.displayName ||
+              node.elementType.render.name ||
+              'UnknownComponent'
 
             return (
               <>
