@@ -52,7 +52,7 @@ export function NavTreePanelView(props: NavTreePanelProps) {
   const [hoveredNodes, setHoveredNodes] = useState<NavTreeNode[]>([])
   const hoveredNode = hoveredNodes[hoveredNodes.length - 1]
 
-  const tabs = ['Element', 'About']
+  const tabs = ['Elements', 'About']
 
   return (
     <Tab.Group
