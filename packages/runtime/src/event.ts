@@ -9,7 +9,7 @@ export function useSubject<T>() {
 
   useEffect(() => {
     return () => {
-      subjectRef.current!.complete()
+      subjectRef.current?.complete()
       subjectRef.current = undefined
     }
   }, [])

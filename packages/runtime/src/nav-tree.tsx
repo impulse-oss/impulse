@@ -6,6 +6,7 @@ import {
 } from '@heroicons/react/solid'
 import animatedScrollTo from 'animated-scroll-to'
 import { Fragment, ReactNode, Ref, useEffect, useRef, useState } from 'react'
+import packageInfo from '../package.json'
 import { Link } from './link'
 import { Fiber, fiberGetSiblings, nodeGetReactRoot } from './react-source'
 
@@ -117,6 +118,12 @@ export function NavTreePanelView(props: NavTreePanelProps) {
             <div className="max-w-[400px] shrink-0">{props.sidePanel}</div>
           </Tab.Panel>
           <Tab.Panel className="p-4">
+            <p>
+              Version:{' '}
+              {(() => {
+                return packageInfo.version
+              })()}
+            </p>
             <p>
               Github:{' '}
               <Link

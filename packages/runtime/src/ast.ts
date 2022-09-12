@@ -358,11 +358,12 @@ export async function transformNodeInCode<T extends Node, R>(
   // console.log('prettierConfig', prettierConfig);
   const prettierConfig = options?.prettierConfig
 
-  const formattedCode = prettier.format(transformResult.babelResult.code!, {
+  const unformattedCode = transformResult.babelResult.code!
+  const formattedCode = prettierConfig ? prettier.format(unformattedCode, {
     ...prettierConfig,
     parser: 'babel-ts',
     plugins: [parserBabel],
-  })
+  }) : unformattedCode
 
   return {
     type: 'success',

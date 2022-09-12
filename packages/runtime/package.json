@@ -31,7 +31,7 @@
     "clean": "rm -rf dist",
     "dev": "npm run clean && concurrently npm:dev:*",
     "dev:app": "cd dev-app && vite",
-    "reset-cdn-cache": "curl https://purge.jsdelivr.net/npm/@impulse.dev/runtime@latest/impulse.iife.js && curl https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/dist/impulse.iife.js > /dev/null",
+    "reset-cdn-cache": "curl https://purge.jsdelivr.net/npm/@impulse.dev/runtime@latest/dist/impulse.iife.js && curl https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/dist/impulse.iife.js > /dev/null",
     "publish-stable": "npm publish --access public && npm run reset-cdn-cache"
   },
   "devDependencies": {
