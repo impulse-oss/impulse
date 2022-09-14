@@ -717,6 +717,17 @@ function CommandBarController(props: {
         selectionState.type === 'elementSelected' &&
         jumpToComponentCall(selectionState.selectedNode),
     },
+    jumpToClassEditor: {
+      showIf:
+        selectionState.type === 'elementSelected' &&
+        selectionState.selectedNode instanceof Element,
+      section: sections.general,
+      name: 'Jump to class editor',
+      shortcut: ['KeyE'],
+      perform: () => {
+        classEditor.focus$.next()
+      },
+    },
     removeElement: {
       showIf: selectionState.type === 'elementSelected',
       name: 'Remove element',
@@ -888,17 +899,6 @@ function CommandBarController(props: {
       shortcut: ['$mod+KeyZ'],
       perform: () =>
         selectionState.type === 'elementSelected' && tryToUndoLatestChange(),
-    },
-    jumpToClassEditor: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof Element,
-      section: sections.general,
-      name: 'Jump to class editor',
-      shortcut: ['KeyE'],
-      perform: () => {
-        classEditor.focus$.next()
-      },
     },
   }
 

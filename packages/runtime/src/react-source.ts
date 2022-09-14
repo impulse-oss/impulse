@@ -5,6 +5,7 @@ export type FiberSource = {
 }
 
 export type Fiber = {
+  alternate: Fiber | null
   return: Fiber | null
   child: Fiber | null
   sibling: Fiber | null
@@ -15,6 +16,7 @@ export type Fiber = {
   _debugSource?: FiberSource
   _debugOwner?: Fiber
   elementType: string | Function | ElementTypeProvider
+  actualStartTime: number
 }
 
 export type ElementTypeProvider = {
@@ -37,10 +39,55 @@ export function getReactFiber(element: Node) {
     return null
   }
 
-  const domFiber = (element[key as keyof typeof element] ??
-    null) as Fiber | null
+  const fiber = (element[key as keyof typeof element] ?? null) as Fiber | null
 
-  return domFiber
+  if (!fiber) {
+    return null
+  }
+
+  const wrapInProxy = (
+    fiber: Fiber,
+    params: { isAlternate: boolean },
+  ): Fiber => {
+    return new Proxy(fiber, {
+      get(target, prop: keyof Fiber) {
+        switch (prop) {
+          case '_debugSource':
+            // if (params.isAlternate) {
+            //   return target[prop]
+            // }
+            // if (!target.sibling && target.alternate?.sibling) {
+            //   return target.alternate?.[prop]
+            // }
+            if (target.alternate && target.alternate.actualStartTime > target.actualStartTime) {
+              return target.alternate?.[prop]
+            }
+            return target[prop]
+          case 'sibling':
+          case 'child': {
+            if (target[prop]) {
+              return wrapInProxy(target[prop]!, {isAlternate: params.isAlternate})
+            }
+            if (target.alternate?.[prop]) {
+              return wrapInProxy(target.alternate[prop]!, {isAlternate: !params.isAlternate})
+            }
+
+            return null
+          }
+          case 'return':
+          case 'alternate':
+          case '_debugOwner': {
+            const node = target[prop]
+            return node ? wrapInProxy(node, {isAlternate: params.isAlternate}) : null
+          }
+        }
+
+        return target[prop]
+      },
+    })
+  }
+
+  return wrapInProxy(fiber, { isAlternate: false })
 }
 
 export function nodeIsComponentRoot(node: Node): node is HTMLElement {

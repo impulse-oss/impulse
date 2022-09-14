@@ -270,8 +270,9 @@ export function NavTreeFromNode({
             )
           }
 
-          const children = node.child
-            ? fiberGetSiblings(node.child)
+          const fiberChild = node.child
+          const children = fiberChild
+            ? fiberGetSiblings(fiberChild)
             : [...(node.stateNode?.childNodes ?? [])]
 
           // node is a React component

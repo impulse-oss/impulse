@@ -354,8 +354,6 @@ export async function transformNodeInCode<T extends Node, R>(
     return { type: 'error' }
   }
 
-  // const prettierConfig = await findClosestFile(dirHandle, fileSrc, ['.prettierrc.js'])
-  // console.log('prettierConfig', prettierConfig);
   const prettierConfig = options?.prettierConfig
 
   const unformattedCode = transformResult.babelResult.code!
@@ -403,10 +401,18 @@ function findNodeAmongJsxChildren(
 }
 
 function isSourceJsxElement(node: t.JSXElement, fiberSource: FiberSource) {
-  const loc = node.openingElement.name.loc
-  const isTargetTag =
-    loc?.start.line === fiberSource.lineNumber &&
-    loc?.start.column === fiberSource.columnNumber
+  const tagLoc = node.openingElement.loc
+  const nameLoc = node.openingElement.name.loc
+
+  const matchesWithTagStart =
+    tagLoc?.start.line === fiberSource.lineNumber &&
+    tagLoc?.start.column === fiberSource.columnNumber
+
+  const matchesWithTagNameStart =
+    nameLoc?.start.line === fiberSource.lineNumber &&
+    nameLoc?.start.column === fiberSource.columnNumber
+
+  const isTargetTag = matchesWithTagStart || matchesWithTagNameStart
 
   return isTargetTag
 }
