@@ -1,0 +1,2 @@
+User-Agent: *
+Sitemap: https://impulse.dev/sitemap.xml
