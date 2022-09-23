@@ -8,12 +8,12 @@ Made by [@krogovoy](https://twitter.com/krogovoy) and [@IVolchenskov](https://tw
 
 Impulse allows you to edit your UI right in the browser while automatically changing your code precisely the way you would do it manually. It's like a code editor extension that goes beyond the code editor.
 
-🍿 See demos at [impulse.dev](https://impulse.dev)
-
 - Built into your app: no need to install any extensions or desktop apps
 - No external services, works directly with the code
 - Made exclusively for developers, not designers
 - Addon, not a replacement: gives you a new tool while not adding any boundaries
+
+🍿 See demos at [impulse.dev](https://impulse.dev)
 
 Compared to writing code manually:
 
@@ -170,7 +170,7 @@ if (process.env.NODE_ENV === 'development') {
 - Space or Enter to open the command bar
 - Use the command bar or the hotkeys (specified on the right for each action) to perform actions
 
-<img src="./public/media/5-keybindings.png" alt="command bar" width="600">
+<img src="./packages/impulse.dev/public/media/5-keybindings.png" alt="command bar" width="600">
 
 What you can do:
 
