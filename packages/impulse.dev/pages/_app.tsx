@@ -4,7 +4,7 @@ import Head from 'next/head'
 
 if (process.env.NODE_ENV === 'development') {
   const impulseParams = {
-    prettierConfig: require('../../../.prettierrc.js'),
+    // prettierConfig: require('../../../.prettierrc.js'),
     tailwindConfig: require('../tailwind.config'),
     config: { editorLinkSchema: 'neovide' },
   }

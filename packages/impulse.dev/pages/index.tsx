@@ -214,7 +214,7 @@ const Home: NextPage = () => {
         </div>
       </footer>
     </div>
-  )
+  );
 }
 
 function SectionWithMedia(props: {

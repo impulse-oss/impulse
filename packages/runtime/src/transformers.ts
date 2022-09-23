@@ -1,11 +1,6 @@
 import * as t from '@babel/types'
 import { SelectionState } from './app'
-import {
-  transformNodeInCode,
-  writeTransformationResultToFile,
-  JSXNode,
-  isNotEmptyNode,
-} from './ast'
+import { transformNodeInCode, writeTransformationResultToFile, JSXNode, isNotEmptyNode } from './ast'
 import { waitForAnyNodeMutation } from './dom'
 import { useDirHandle } from './fs'
 import { warn } from './logger'
@@ -18,30 +13,36 @@ export function makeTransformers(params: {
   selectionState: SelectionState
   setSelectedNode: (node: Node) => void
 }) {
-  const { getDirHandle, prettierConfig, selectionState, setSelectedNode } =
-    params
+  const { getDirHandle, prettierConfig, selectionState, setSelectedNode } = params
   const addClass = async (
     selectedElement: Element,
     classNameToAdd: string,
     classesToRemove: string[] = [],
   ) => {
+    const cWarn = (...messages: any) => {
+      return warn('addClass', ...messages)
+    }
+
     const transformResult = await transformNodeInCode(
       selectedElement,
       ({ node }) => {
         const attributes = node.openingElement.attributes
 
         const existingClassNameAttribute = attributes.find(
-          (attribute) =>
-            attribute.type === 'JSXAttribute' &&
-            attribute.name.name === 'className',
+          (attribute) => attribute.type === 'JSXAttribute' && attribute.name.name === 'className',
         ) as t.JSXAttribute
 
         if (existingClassNameAttribute) {
-          if (existingClassNameAttribute.value?.type !== 'StringLiteral') {
+          const classNameAttrValue = existingClassNameAttribute.value
+          if (classNameAttrValue?.type !== 'StringLiteral') {
+            cWarn(
+              'removeClass: className attribute is not a string literal, but rather a',
+              classNameAttrValue?.type,
+            )
             return
           }
 
-          const classList = existingClassNameAttribute.value.value.split(' ')
+          const classList = classNameAttrValue.value.split(' ')
           if (classList.includes(classNameToAdd)) {
             return
           }
@@ -74,10 +75,7 @@ export function makeTransformers(params: {
           return
         }
 
-        const className = t.jsxAttribute(
-          t.jsxIdentifier('className'),
-          t.stringLiteral(classNameToAdd),
-        )
+        const className = t.jsxAttribute(t.jsxIdentifier('className'), t.stringLiteral(classNameToAdd))
 
         attributes.push(className)
       },
@@ -93,10 +91,7 @@ export function makeTransformers(params: {
     await writeTransformationResultToFile(transformResult)
   }
 
-  const removeClass = async (
-    selectedElement: Element,
-    classNameToRemove: string,
-  ) => {
+  const removeClass = async (selectedElement: Element, classNameToRemove: string) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       ({ node }) => {
@@ -106,9 +101,7 @@ export function makeTransformers(params: {
         const attributes = node.openingElement.attributes
 
         const existingClassNameAttribute = attributes.find(
-          (attribute) =>
-            attribute.type === 'JSXAttribute' &&
-            attribute.name.name === 'className',
+          (attribute) => attribute.type === 'JSXAttribute' && attribute.name.name === 'className',
         ) as t.JSXAttribute
 
         if (!existingClassNameAttribute) {
@@ -126,9 +119,7 @@ export function makeTransformers(params: {
         }
 
         const classList = classNameAttrValue.value.trim().split(' ')
-        const newClassList = classList.filter(
-          (className) => className !== classNameToRemove,
-        )
+        const newClassList = classList.filter((className) => className !== classNameToRemove)
 
         if (newClassList.length === 0) {
           node.openingElement.attributes = attributes.filter((attribute) => {
@@ -141,9 +132,7 @@ export function makeTransformers(params: {
           return
         }
 
-        existingClassNameAttribute.value = t.stringLiteral(
-          newClassList.join(' '),
-        )
+        existingClassNameAttribute.value = t.stringLiteral(newClassList.join(' '))
       },
       await getDirHandle({ mode: 'readwrite' }),
       { preferAncestor: 'none', prettierConfig },
@@ -165,9 +154,7 @@ export function makeTransformers(params: {
       await getDirHandle({ mode: 'readwrite' }),
       {
         prettierConfig,
-        preferAncestor: nodeIsComponentRoot(selectedElement)
-          ? 'owner'
-          : 'parent',
+        preferAncestor: nodeIsComponentRoot(selectedElement) ? 'owner' : 'parent',
       },
     )
 
@@ -197,10 +184,7 @@ export function makeTransformers(params: {
     // selectedElement.__impulseHide = false
   }
 
-  const insertBeforeNode = async (
-    selectedElement: Node,
-    jsxNodeToInsert: JSXNode,
-  ) => {
+  const insertBeforeNode = async (selectedElement: Node, jsxNodeToInsert: JSXNode) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       (path) => {
@@ -217,10 +201,7 @@ export function makeTransformers(params: {
     await writeTransformationResultToFile(transformResult)
   }
 
-  const insertAfterNode = async (
-    selectedElement: Node,
-    jsxNodeToInsert: JSXNode,
-  ) => {
+  const insertAfterNode = async (selectedElement: Node, jsxNodeToInsert: JSXNode) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       (path) => {
@@ -243,10 +224,7 @@ export function makeTransformers(params: {
     }
   }
 
-  const insertChild = async (
-    selectedElement: Element,
-    jsxNodeToInsert: JSXNode,
-  ) => {
+  const insertChild = async (selectedElement: Element, jsxNodeToInsert: JSXNode) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       (path) => {
@@ -269,10 +247,7 @@ export function makeTransformers(params: {
     }
   }
 
-  const changeTag = async (
-    selectedElement: Element,
-    newTagName: typeof htmlTags[0],
-  ) => {
+  const changeTag = async (selectedElement: Element, newTagName: typeof htmlTags[0]) => {
     const transformResult = await transformNodeInCode(
       selectedElement,
       (path) => {
@@ -316,17 +291,12 @@ export function makeTransformers(params: {
           return
         }
 
-        ;[children[index], children[siblingIndex]] = [
-          children[siblingIndex],
-          children[index],
-        ]
+        ;[children[index], children[siblingIndex]] = [children[siblingIndex], children[index]]
         parent.children = children
       },
       await getDirHandle({ mode: 'readwrite' }),
       {
-        preferAncestor: nodeIsComponentRoot(selectedElement)
-          ? 'owner'
-          : 'parent',
+        preferAncestor: nodeIsComponentRoot(selectedElement) ? 'owner' : 'parent',
         prettierConfig,
       },
     )
@@ -344,8 +314,7 @@ export function makeTransformers(params: {
       return
     }
 
-    const newChildIndex =
-      selectionState.indexInsideParent + (direction === 'up' ? -1 : 1)
+    const newChildIndex = selectionState.indexInsideParent + (direction === 'up' ? -1 : 1)
 
     await writeTransformationResultToFile(transformResult)
     await waitForAnyNodeMutation(selectedElement)

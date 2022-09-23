@@ -717,12 +717,12 @@ function CommandBarController(props: {
         selectionState.type === 'elementSelected' &&
         jumpToComponentCall(selectionState.selectedNode),
     },
-    jumpToClassEditor: {
+    focusOnClassEditor: {
       showIf:
         selectionState.type === 'elementSelected' &&
         selectionState.selectedNode instanceof Element,
       section: sections.general,
-      name: 'Jump to class editor',
+      name: 'Focus on class editor',
       shortcut: ['KeyE'],
       perform: () => {
         classEditor.focus$.next()
