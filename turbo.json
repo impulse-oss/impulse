@@ -17,6 +17,9 @@
     "publish-stable": {
       "dependsOn": ["build", "^publish-stable"],
       "cache": false
+    },
+    "impulse.dev#publish-stable": {
+      "dependsOn": []
     }
   }
 }
