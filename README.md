@@ -1,39 +1,25 @@
-# Impulse: yes-code UI editor (alpha)
+# Impulse: Impossible Dev Tools for React and Tailwind
+
+Build modern websites right in your browser without giving up on code.
 
 [impulse.dev](https://impulse.dev) | [Discord](https://discord.gg/nDDCyyedbs)
 
 Made by [@krogovoy](https://twitter.com/krogovoy) and [@IVolchenskov](https://twitter.com/IVolchenskov)
 
-<!-- TODO video link -->
+Impulse allows you to edit your UI right in the browser while automatically changing your code precisely the way you would do it manually. It's like a code editor extension that goes beyond the code editor.
 
-Impulse is a visual UI editor for developers that use React and Tailwind.
-
-<br />
-
-<img src="https://static.tildacdn.com/tild3533-6633-4039-b462-366564616231/impulse-gif-create-p.gif" alt="impulse demo" />
-
-[Watch full demo (40:22)](https://youtu.be/QaTSsaGXCco)
-
-<br />
-
-It allows you to edit your UI right in the browser while automatically changing your code precisely the way you would do it manually.
+🍿 See demos at [impulse.dev](https://impulse.dev)
 
 - Built into your app: no need to install any extensions or desktop apps
 - No external services, works directly with the code
 - Made exclusively for developers, not designers
-- Addon, not a replacement: gives you a new tool while not taking anything away
+- Addon, not a replacement: gives you a new tool while not adding any boundaries
 
 Compared to writing code manually:
 
 - Faster
 - More fun
 - Same code produced
-
-Features:
-
-- Select any DOM element and jump straight to its code in your editor
-- Add new markup visually without leaving the browser
-- Make edits to any existing DOM element with all changes saved to code automatically
 
 ## Requirements
 
@@ -89,9 +75,11 @@ Copy and paste the code below into your browser's console.
 d=document;s=d.createElement('script');s.src=`https://cdn.jsdelivr.net/npm/@impulse.dev/runtime@latest/inject.js`;d.body.appendChild(s)
 ```
 
-Easy way to play with the tool without installing anything, but obviously, it will go away once you refresh the page.
+Easy way to play with the tool without installing anything, but it will go away once you refresh the page.
 
 ### Option 2: npm (recommended)
+
+Setup once and for all for the entire team.
 
 ```sh
 npm i -D @impulse.dev/runtime@latest
@@ -117,11 +105,15 @@ Paste this script tag at the end of `<body>`
 }
 ```
 
+### Don't ship Impulse to production
+
 IMPORTANT: make sure you are not shipping Impulse in your production build! It will bloat your bundle size!
 
 Most bundlers cut out all the code inside an `if (process.env.NODE_ENV === 'development') { ... }`, but it's recommended to make a production build and compare the bundle size to what it was before.
 
-## Setup
+## Configure
+
+Once installed, Impulse is ready for work. Below are some things you might want to set up for Impulse to work best for you.
 
 ### Browser
 
@@ -141,34 +133,44 @@ For security reasons, File System Access API only works for `localhost` when htt
 
 ### Prettier config
 
-Impulse edits your files and uses Prettier for formatting.
+Impulse edits your code. By default, it tries its best to make those changes as minimal as possible.
 
-However, it can't get access to your Prettier config as it's a browser-only Node-less environment.
+However, it doesn't really know how to format your code.
 
-To fix it, you can pass it your config:
+If you want it to use Prettier after each code change (recommended), pass your config to `run()`:
 
 ```diff
 if (process.env.NODE_ENV === 'development') {
 -  import('@impulse.dev/runtime').then((impulse) => impulse.run())
 +  import('@impulse.dev/runtime').then((impulse) => impulse.run({
-+    prettierConfig: require('path_to_prettier_config')
++    prettierConfig: require('./path_to/.prettierrc.js')
++  }))
+}
+```
+
+### Tailwind config
+
+If you have extended the standard theme in Tailwind, pass your `tailwind.config.js` to `run()`:
+
+```diff
+if (process.env.NODE_ENV === 'development') {
+-  import('@impulse.dev/runtime').then((impulse) => impulse.run())
++  import('@impulse.dev/runtime').then((impulse) => impulse.run({
++     tailwindConfig: require('./path_to/tailwind.config.js'),
 +  }))
 }
 ```
 
 ## Use
 
-IMPORTANT: Impulse is at the alpha stage. Although not likely, assume that it can unrecoverably ruin your codebase. Make sure to have a backup and/or a clean git state.
-
-[Watch full demo (40:22)](https://youtu.be/QaTSsaGXCco)
-
 - Option/Alt+Click to select any element on the page
-- Esc to remove selection
+- Esc to remove selection and exit Impulse
 - Arrow keys or h, j, k, l for keyboard navigation
+- Use the class editor on the right to add, replace, or remove Tailwind classes
 - Space or Enter to open the command bar
 - Use the command bar or the hotkeys (specified on the right for each action) to perform actions
 
-<img src="./files/command-bar-screenshot.png" alt="command bar" width="600">
+<img src="./public/media/5-keybindings.png" alt="command bar" width="600">
 
 What you can do:
 
