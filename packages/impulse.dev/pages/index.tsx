@@ -12,6 +12,7 @@ import metaImage from '../public/meta-img.png'
 const Home: NextPage = () => {
   const metaTitle = 'Impulse – Impossible Dev Tools for React and Tailwind'
   const tagline = 'Build modern websites right in your browser without giving up on code'
+  const metaImageAbs = new URL(metaImage.src, 'https://impulse.dev')
 
   return (
     <div className="text-theme-content bg-theme-bg min-h-screen">
@@ -23,13 +24,13 @@ const Home: NextPage = () => {
 
         <meta property="og:type" content="website" />
         <meta property="og:title" content={metaTitle} />
-        <meta property="og:image" content={metaImage.src} />
+        <meta property="og:image" content={metaImageAbs.toString()} />
         <meta property="og:url" content="https://impulse.dev/" />
         <meta property="og:description" content={tagline} />
 
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:creator" content="@krogovoy" />
-        <meta property="twitter:image" content={metaImage.src} />
+        <meta property="twitter:image" content={metaImageAbs.toString()} />
         <meta property="twitter:title" content={metaTitle} />
         <meta property="twitter:description" content={tagline} />
       </Head>
