@@ -17,21 +17,21 @@ const Home: NextPage = () => {
     <div className="text-theme-content bg-theme-bg min-h-screen">
       <Head>
         <title>{metaTitle}</title>
+        <meta name="canonical" content="https://impulse.dev/" />
+        <meta name="description" content={tagline} />
         <link rel="shortcut icon" href={favicon.src} type="image/x-icon" />
 
+        <meta property="og:type" content="website" />
         <meta property="og:title" content={metaTitle} />
         <meta property="og:image" content={metaImage.src} />
         <meta property="og:url" content="https://impulse.dev/" />
-        <meta name="canonical" content="https://impulse.dev/" />
+        <meta property="og:description" content={tagline} />
 
-        <meta name="description" content={tagline} />
-        <meta name="og:description" content={tagline} />
-
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:creator" content="@krogovoy" />
-        <meta name="twitter:image" content={metaImage.src} />
-        <meta name="twitter:title" content={metaTitle} />
-        <meta name="twitter:description" content={tagline} />
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:creator" content="@krogovoy" />
+        <meta property="twitter:image" content={metaImage.src} />
+        <meta property="twitter:title" content={metaTitle} />
+        <meta property="twitter:description" content={tagline} />
       </Head>
       <header>
         <div className="flex justify-between px-4 md:px-10 pb-3 pt-5">
@@ -50,9 +50,7 @@ const Home: NextPage = () => {
           </div>
         </div>
         <div className="max-w-5xl mx-auto mt-16 font-mono px-4 md:px-8">
-          <h1 className="text-center text-4xl md:text-5xl font-bold">
-            {tagline}
-          </h1>
+          <h1 className="text-center text-4xl md:text-5xl font-bold">{tagline}</h1>
           <span className="text-center block mt-6 text-lg md:text-xl">
             Impossible Dev Tools for React and Tailwind
           </span>
@@ -80,8 +78,8 @@ const Home: NextPage = () => {
               </p>
               <p>
                 React and Tailwind made it an infinitely better experience for me, but something was still
-                missing. Switching between the code and the browser all the time felt wrong. At the same time, I
-                felt lost with No-code editors because they are made for designers not developers.
+                missing. Switching between the code and the browser all the time felt wrong. At the same time,
+                I felt lost with No-code editors because they are made for designers not developers.
               </p>
               <p>
                 Read more:{' '}
@@ -93,8 +91,8 @@ const Home: NextPage = () => {
                 </a>
               </p>
               <p>
-                Impulse is my experiment to bridge that gap and make a "design"
-                tool that works directly with my code.
+                Impulse is my experiment to bridge that gap and make a "design" tool that works directly with
+                my code.
               </p>
 
               <p>With Impulse, I've come to love web design.</p>
@@ -107,7 +105,7 @@ const Home: NextPage = () => {
             </figcaption>
           </figure>
         </section>
-        <section className="mt-40">
+        <section className="mt-40 max-w-3xl mx-auto">
           <SectionWithMedia
             videoSrc={['/media/1-jump-to-code.webm', '/media/1-jump-to-code.mp4']}
             heading="Jump to code"
@@ -182,8 +180,7 @@ const Home: NextPage = () => {
               <>
                 <p>Never get lost.</p>
                 <p>
-                  Impulse shows you a simple document tree that combines HTML elements and React
-                  components.
+                  Impulse shows you a simple document tree that combines HTML elements and React components.
                 </p>
               </>
             }
