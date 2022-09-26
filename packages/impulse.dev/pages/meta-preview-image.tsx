@@ -1,4 +1,4 @@
-export default function MetaPrevieImage() {
+export default function MetaPreviewImage() {
   return (
     <div className="w-screen h-screen flex bg-theme-bg justify-center items-center flex-col text-theme-content">
       <div className="font-mono text-8xl">{'<impulse>'}</div>

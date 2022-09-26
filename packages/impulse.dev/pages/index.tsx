@@ -15,7 +15,7 @@ const Home: NextPage = () => {
   const metaImageAbs = new URL(metaImage.src, 'https://impulse.dev')
 
   return (
-    <div className="text-theme-content bg-theme-bg min-h-screen">
+    <div className="text-theme-content bg-theme-bg/70 min-h-screen">
       <Head>
         <title>{metaTitle}</title>
         <meta name="canonical" content="https://impulse.dev/" />
@@ -166,7 +166,7 @@ const Home: NextPage = () => {
             }
           />
           <SectionWithMedia
-            img={<Image className="rounded-lg" src={imgKeybindings} />}
+            img={<Image className="rounded-lg" src={imgKeybindings} alt="Key bindings screenshot" />}
             heading="Key bindings"
             description={
               <>
@@ -175,7 +175,7 @@ const Home: NextPage = () => {
             }
           />
           <SectionWithMedia
-            img={<Image className="rounded-lg" src={imgNavtree} />}
+            img={<Image className="rounded-lg" src={imgNavtree} alt="Navigation tree screenshot" />}
             heading="Navigation tree"
             description={
               <>
