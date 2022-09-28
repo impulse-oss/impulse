@@ -35,12 +35,15 @@ const Home: NextPage = () => {
         <meta property="twitter:description" content={tagline} />
       </Head>
       <header>
-        <div className="flex justify-between px-4 md:px-10 pb-3 pt-5">
+        <div className="flex justify-between px-4 md:px-10 pb-3 pt-5 gap-x-2">
           <div>
             <Link href="/">
               <a className="font-mono text-2xl">{'<impulse>'}</a>
             </Link>
           </div>
+          <a className="flex fill-current items-center gap-x-1 underline" href="#">
+            Support us on Product Hunt!
+          </a>
           <div className="flex items-center gap-x-6">
             <a href="https://github.com/impulse-oss/impulse">
               <GithubIcon />
@@ -50,7 +53,7 @@ const Home: NextPage = () => {
             </a>
           </div>
         </div>
-        <div className="max-w-5xl mx-auto mt-16 font-mono px-4 md:px-8">
+        <div className="max-w-5xl mx-auto mt-16 font-mono px-6 md:px-8">
           <h1 className="text-center text-4xl md:text-5xl font-bold">{tagline}</h1>
           <span className="text-center block mt-6 text-lg md:text-xl">
             Impossible Dev Tools for React and Tailwind
@@ -66,7 +69,7 @@ const Home: NextPage = () => {
           </div>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 md:px-8">
+      <main className="max-w-6xl mx-auto px-6 md:px-8">
         <section className="flex flex-col items-center max-w-3xl mx-auto">
           <figure>
             <blockquote className="text-theme-content-opaque text-lg mt-6 flex flex-col gap-y-2">
