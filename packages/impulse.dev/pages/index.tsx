@@ -41,7 +41,7 @@ const Home: NextPage = () => {
               <a className="font-mono text-2xl">{'<impulse>'}</a>
             </Link>
           </div>
-          <a className="flex fill-current items-center gap-x-1 underline" href="#">
+          <a className="flex fill-current items-center gap-x-1 underline" href="https://www.producthunt.com/posts/impulse-dev">
             Support us on Product Hunt!
           </a>
           <div className="flex items-center gap-x-6">
