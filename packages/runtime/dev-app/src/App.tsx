@@ -28,7 +28,7 @@ function App() {
           tabWidth: 2,
         }}
         tailwindConfig={tailwindConfig}
-        config={{editorLinkSchema: 'neovide'}}
+        config={{editorLinkSchema: 'vscode'}}
       />
 
       {/* <Playground /> */}
