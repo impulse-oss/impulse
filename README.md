@@ -199,7 +199,7 @@ Requirements:
 Clone the repo:
 
 ```sh
-git clone git@github.com:kirillrogovoy/impulse.git && cd impulse
+git clone git@github.com:impulse-oss/impulse.git && cd impulse
 ```
 
 Install dependencies:
