@@ -20,6 +20,9 @@
     },
     "impulse.dev#publish-stable": {
       "dependsOn": []
+    },
+    "impulse.dev#dev": {
+      "dependsOn": ["@impulse.dev/runtime#build"]
     }
   }
 }
