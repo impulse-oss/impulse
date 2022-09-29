@@ -1,6 +1,3 @@
 export function Example() {
-  return (
-    <div>
-    </div>
-  )
+  return <div></div>
 }

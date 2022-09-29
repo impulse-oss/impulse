@@ -1,8 +1,4 @@
-import {
-  ChevronDoubleRightIcon,
-  MinusCircleIcon,
-  PencilIcon,
-} from '@heroicons/react/solid'
+import { ChevronDoubleRightIcon, MinusCircleIcon, PencilIcon } from '@heroicons/react/solid'
 import animateScrollTo from 'animated-scroll-to'
 import fuzzySort from 'fuzzysort'
 import { atom, PrimitiveAtom, useAtom } from 'jotai'
@@ -74,16 +70,11 @@ export function ClassEditor({
 
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const tailwindClassesArray = useMemo(
-    () => Object.keys(tailwindClasses),
-    [tailwindClasses],
-  )
+  const tailwindClassesArray = useMemo(() => Object.keys(tailwindClasses), [tailwindClasses])
 
   const existingClasses =
     selectedNode instanceof HTMLElement
-      ? [...selectedNode.classList].filter(
-          (className) => !className.startsWith('__impulse__'),
-        )
+      ? [...selectedNode.classList].filter((className) => !className.startsWith('__impulse__'))
       : []
 
   const fuzzyMatches = useMemo(() => {
@@ -122,15 +113,11 @@ export function ClassEditor({
       : [...fuzzyMatches]
           .sort((a, b) => {
             const indexDifference =
-              tailwindClassesArray.indexOf(b.obj.className) -
-              tailwindClassesArray.indexOf(a.obj.className)
+              tailwindClassesArray.indexOf(b.obj.className) - tailwindClassesArray.indexOf(a.obj.className)
 
-            const scoreDifference = Math.abs(
-              Math.abs(a.score) - Math.abs(b.score),
-            )
+            const scoreDifference = Math.abs(Math.abs(a.score) - Math.abs(b.score))
             const scoreDifferenceCoof =
-              Math.abs(scoreDifference) /
-              Math.max(Math.abs(a.score), Math.abs(b.score))
+              Math.abs(scoreDifference) / Math.max(Math.abs(a.score), Math.abs(b.score))
 
             // if the difference between the two options is not that big, choose based on which is listed the first
             // in the list of all tailwind classes
@@ -146,13 +133,11 @@ export function ClassEditor({
   type ListSelectionState = {
     selectedKey: string | null
   }
-  const [listSelectionState, setListSelectionState] =
-    useState<ListSelectionState>({
-      selectedKey: null,
-    })
+  const [listSelectionState, setListSelectionState] = useState<ListSelectionState>({
+    selectedKey: null,
+  })
 
-  const tailwindClassMatched =
-    tailwindClasses[listSelectionState.selectedKey ?? '']
+  const tailwindClassMatched = tailwindClasses[listSelectionState.selectedKey ?? '']
 
   const classesToReplace = useMemo(() => {
     if (!tailwindClassMatched) {
@@ -184,8 +169,7 @@ export function ClassEditor({
     if (!state.inputFocused) {
       return
     }
-    const selectedKey =
-      tailwindClassCandidates.length > 0 ? tailwindClassCandidates[0] : null
+    const selectedKey = tailwindClassCandidates.length > 0 ? tailwindClassCandidates[0] : null
 
     setListSelectionState({
       selectedKey,
@@ -235,8 +219,7 @@ export function ClassEditor({
         const index = tailwindClassCandidates.indexOf(selectedKey)
         const prevIndex = index - 1
         const prevItem =
-          tailwindClassCandidates[prevIndex] ??
-          tailwindClassCandidates[tailwindClassCandidates.length - 1]
+          tailwindClassCandidates[prevIndex] ?? tailwindClassCandidates[tailwindClassCandidates.length - 1]
         setListSelectionState({
           selectedKey: prevItem,
         })
@@ -246,8 +229,7 @@ export function ClassEditor({
         e.preventDefault()
         const index = tailwindClassCandidates.indexOf(selectedKey)
         const nextIndex = index + 1
-        const nextItem =
-          tailwindClassCandidates[nextIndex] ?? tailwindClassCandidates[0]
+        const nextItem = tailwindClassCandidates[nextIndex] ?? tailwindClassCandidates[0]
         setListSelectionState({
           selectedKey: nextItem,
         })
@@ -282,19 +264,12 @@ export function ClassEditor({
     const selectedRect = listSelectedElementRef.current.getBoundingClientRect()
 
     console.log(selectedRect, containerRect)
-    if (
-      selectedRect.top < containerRect.top ||
-      selectedRect.bottom > containerRect.bottom
-    ) {
+    if (selectedRect.top < containerRect.top || selectedRect.bottom > containerRect.bottom) {
       animateScrollTo(listSelectedElementRef.current, {
         elementToScroll: listContainerRef.current,
       })
     }
-  }, [
-    listContainerRef.current,
-    listSelectedElementRef.current,
-    listSelectionState.selectedKey,
-  ])
+  }, [listContainerRef.current, listSelectedElementRef.current, listSelectionState.selectedKey])
 
   useEffect(() => {
     rerender()
@@ -362,8 +337,7 @@ export function ClassEditorView(props: {
   existingClasses: string[]
   classesToReplace: string[]
 }) {
-  const selectedClassIsExistingClass =
-    props.selectedKey && props.existingClasses.includes(props.selectedKey)
+  const selectedClassIsExistingClass = props.selectedKey && props.existingClasses.includes(props.selectedKey)
 
   return (
     <div
@@ -374,26 +348,21 @@ export function ClassEditorView(props: {
         opacity: props.classEditorState.inputFocused ? 1 : 0.6,
       }}
     >
-      {props.classEditorState.inputFocused &&
-        props.tailwindClassMatched &&
-        !selectedClassIsExistingClass && (
-          <style>{`.${classEditorTmpClass} {${props.tailwindClassMatched.nodes
-            .map((node) => {
-              return `${node.prop}: ${node.value};`
-            })
-            .join('')}}`}</style>
-        )}
+      {props.classEditorState.inputFocused && props.tailwindClassMatched && !selectedClassIsExistingClass && (
+        <style>{`.${classEditorTmpClass} {${props.tailwindClassMatched.nodes
+          .map((node) => {
+            return `${node.prop}: ${node.value};`
+          })
+          .join('')}}`}</style>
+      )}
       {props.selectedNode instanceof Element && (
         <div className="pt-1 px-2 text-sm">
           {'<'}
           {props.selectedNode.tagName.toLowerCase()}
           {'>'}:{' '}
           {(() => {
-            const roundTwoDecimals = (num: number) =>
-              Math.round(num * 100) / 100
-            const { width, height } = elementGetAbsolutePosition(
-              props.selectedNode,
-            )
+            const roundTwoDecimals = (num: number) => Math.round(num * 100) / 100
+            const { width, height } = elementGetAbsolutePosition(props.selectedNode)
             return `${roundTwoDecimals(width)}x${roundTwoDecimals(height)}`
           })()}
         </div>
@@ -465,12 +434,7 @@ export function ClassEditorView(props: {
                   )
 
                   if (colorProp) {
-                    return (
-                      <div
-                        className="w-5 h-5"
-                        style={{ backgroundColor: colorProp.value }}
-                      ></div>
-                    )
+                    return <div className="w-5 h-5" style={{ backgroundColor: colorProp.value }}></div>
                   }
 
                   if (!props.tailwindClasses[className]) {
@@ -486,18 +450,14 @@ export function ClassEditorView(props: {
                     return `${className} (remove)`
                   }
                   if (isSelected && props.classesToReplace.length > 0) {
-                    return `${className} (instead of ${props.classesToReplace.join(
-                      ' ',
-                    )})`
+                    return `${className} (instead of ${props.classesToReplace.join(' ')})`
                   }
                   return className
                 })()}
               </span>
               {isSelected && props.tailwindClassMatched && (
                 <div className="self-center ml-2 text-sm basis-0 whitespace-nowrap text-theme-content-opaque">
-                  {props.tailwindClassMatched.nodes
-                    .map(({ prop, value }) => `${prop}: ${value};`)
-                    .join(' ')}
+                  {props.tailwindClassMatched.nodes.map(({ prop, value }) => `${prop}: ${value};`).join(' ')}
                 </div>
               )}
             </button>

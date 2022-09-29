@@ -6,12 +6,7 @@ import prettier from 'prettier'
 import parserBabel from 'prettier/parser-babel'
 import { fsGetFileContents, fsWriteToFile, OpenFile } from './fs'
 import { warn } from './logger'
-import {
-  elementGetOwnerWithSource,
-  fiberGetSiblings,
-  FiberSource,
-  getReactFiber,
-} from './react-source'
+import { elementGetOwnerWithSource, fiberGetSiblings, FiberSource, getReactFiber } from './react-source'
 import { undoFileOnChange } from './undo'
 
 export type JSXNode = t.JSXElement['children'][0]
@@ -26,10 +21,7 @@ export type TransformResultError = {
   error: Error
 }
 
-export function transformCode(
-  inputCode: string,
-  visitor: TraverseOptions,
-): TransformResult {
+export function transformCode(inputCode: string, visitor: TraverseOptions): TransformResult {
   try {
     const babelResult = cmTransform(inputCode, {
       plugins: [{ visitor }],
@@ -97,9 +89,7 @@ export async function transformNodeInCode<T extends Node, R>(
     elementGetOwnerWithSource(domNode)?._debugSource?.fileName ??
     elementGetOwnerWithSource(domNode.parentElement)?._debugSource?.fileName
 
-  const fileSrc = shouldLookForOwner
-    ? ownerFileName
-    : targetNodeFileName ?? ownerFileName
+  const fileSrc = shouldLookForOwner ? ownerFileName : targetNodeFileName ?? ownerFileName
 
   if (!fileSrc) {
     сWarn('could not detect the file source path')
@@ -113,16 +103,13 @@ export async function transformNodeInCode<T extends Node, R>(
   }
 
   const ownerWithSource =
-    elementGetOwnerWithSource(domNode) ??
-    elementGetOwnerWithSource(domNode.parentElement)
+    elementGetOwnerWithSource(domNode) ?? elementGetOwnerWithSource(domNode.parentElement)
 
   const isSourceJsxNode = (path: NodePath<JSXNode>) => {
     // regular JSXElement: rely on its fiber's source
     if (domNode instanceof Element) {
       if (preferAncestor === 'none') {
-        return (
-          source && path.isJSXElement() && isSourceJsxElement(path.node, source)
-        )
+        return source && path.isJSXElement() && isSourceJsxElement(path.node, source)
       }
 
       if (shouldLookForOwner) {
@@ -133,9 +120,7 @@ export async function transformNodeInCode<T extends Node, R>(
         )
       }
 
-      return (
-        source && path.isJSXElement() && isSourceJsxElement(path.node, source)
-      )
+      return source && path.isJSXElement() && isSourceJsxElement(path.node, source)
     }
 
     // text node is the only child - and it doesn't have a fiber
@@ -156,22 +141,13 @@ export async function transformNodeInCode<T extends Node, R>(
         : ownerWithSource
 
       // the text node is the child of a component
-      if (
-        parentOwner?._debugSource &&
-        parentOwner.memoizedProps?.children === children
-      ) {
-        return isSourceJsxElement(
-          path.parentPath.node,
-          parentOwner._debugSource,
-        )
+      if (parentOwner?._debugSource && parentOwner.memoizedProps?.children === children) {
+        return isSourceJsxElement(path.parentPath.node, parentOwner._debugSource)
       }
 
       if (
         parentElementFiber._debugSource &&
-        isSourceJsxElement(
-          path.parentPath.node,
-          parentElementFiber._debugSource,
-        )
+        isSourceJsxElement(path.parentPath.node, parentElementFiber._debugSource)
       ) {
         return true
       }
@@ -194,9 +170,7 @@ export async function transformNodeInCode<T extends Node, R>(
 
       const fiberSiblings = fiberGetSiblings(fiber)
 
-      const fiberElementSibling = fiberSiblings.find(
-        (fiber) => fiber.stateNode instanceof Element,
-      )
+      const fiberElementSibling = fiberSiblings.find((fiber) => fiber.stateNode instanceof Element)
 
       if (fiberElementSibling) {
         const siblingSource = fiberElementSibling._debugSource
@@ -204,10 +178,7 @@ export async function transformNodeInCode<T extends Node, R>(
           return false
         }
 
-        const siblingJsxElement =
-          parentPath.node.children.filter(isNotEmptyNode)[
-            fiberElementSibling.index
-          ]
+        const siblingJsxElement = parentPath.node.children.filter(isNotEmptyNode)[fiberElementSibling.index]
         if (
           siblingJsxElement?.type !== 'JSXElement' ||
           !isSourceJsxElement(siblingJsxElement, siblingSource)
@@ -215,8 +186,7 @@ export async function transformNodeInCode<T extends Node, R>(
           return false
         }
 
-        const targetJsxElement =
-          parentPath.node.children.filter(isNotEmptyNode)[fiber.index]
+        const targetJsxElement = parentPath.node.children.filter(isNotEmptyNode)[fiber.index]
         if (path.node !== targetJsxElement) {
           return false
         }
@@ -239,18 +209,11 @@ export async function transformNodeInCode<T extends Node, R>(
         return false
       }
 
-      if (
-        grandParentPath.node.children.filter(isNotEmptyNode)[
-          parentFiber.index
-        ] !== path.parentPath.node
-      ) {
+      if (grandParentPath.node.children.filter(isNotEmptyNode)[parentFiber.index] !== path.parentPath.node) {
         return false
       }
 
-      if (
-        parentPath.node.children.filter(isNotEmptyNode)[fiber.index] !==
-        path.node
-      ) {
+      if (parentPath.node.children.filter(isNotEmptyNode)[fiber.index] !== path.node) {
         return false
       }
 
@@ -266,10 +229,7 @@ export async function transformNodeInCode<T extends Node, R>(
       return false
     }
 
-    if (
-      !parentFiber?._debugSource ||
-      !isSourceJsxElement(parentPath.node, parentFiber._debugSource)
-    ) {
+    if (!parentFiber?._debugSource || !isSourceJsxElement(parentPath.node, parentFiber._debugSource)) {
       return false
     }
 
@@ -280,9 +240,7 @@ export async function transformNodeInCode<T extends Node, R>(
 
   let visitorHasBeenCalled = false
   let visitorResult: undefined | R = undefined
-  const visitorOnce = (
-    path: NodePath<T extends Element ? t.JSXElement : JSXNode>,
-  ) => {
+  const visitorOnce = (path: NodePath<T extends Element ? t.JSXElement : JSXNode>) => {
     if (visitorHasBeenCalled) {
       warn('mathched more than one node', domNode, path)
       return visitorResult
@@ -301,9 +259,7 @@ export async function transformNodeInCode<T extends Node, R>(
             if (!isSourceJsxNode(path)) {
               return
             }
-            visitorResult = (
-              visitorOnce as (path: NodePath<t.JSXElement>) => R
-            )(path)
+            visitorResult = (visitorOnce as (path: NodePath<t.JSXElement>) => R)(path)
           },
         }
       : {
@@ -311,36 +267,28 @@ export async function transformNodeInCode<T extends Node, R>(
             if (!isSourceJsxNode(path)) {
               return
             }
-            visitorResult = (visitorOnce as (path: NodePath<t.JSXText>) => R)(
-              path,
-            )
+            visitorResult = (visitorOnce as (path: NodePath<t.JSXText>) => R)(path)
           },
 
           JSXFragment: (path) => {
             if (!isSourceJsxNode(path)) {
               return
             }
-            visitorResult = (
-              visitorOnce as (path: NodePath<t.JSXFragment>) => R
-            )(path)
+            visitorResult = (visitorOnce as (path: NodePath<t.JSXFragment>) => R)(path)
           },
 
           JSXExpressionContainer: (path) => {
             if (!isSourceJsxNode(path)) {
               return
             }
-            visitorResult = (
-              visitorOnce as (path: NodePath<t.JSXExpressionContainer>) => R
-            )(path)
+            visitorResult = (visitorOnce as (path: NodePath<t.JSXExpressionContainer>) => R)(path)
           },
 
           JSXSpreadChild: (path) => {
             if (!isSourceJsxNode(path)) {
               return
             }
-            visitorResult = (
-              visitorOnce as (path: NodePath<t.JSXSpreadChild>) => R
-            )(path)
+            visitorResult = (visitorOnce as (path: NodePath<t.JSXSpreadChild>) => R)(path)
           },
         },
   )
@@ -357,11 +305,13 @@ export async function transformNodeInCode<T extends Node, R>(
   const prettierConfig = options?.prettierConfig
 
   const unformattedCode = transformResult.babelResult.code!
-  const formattedCode = prettierConfig ? prettier.format(unformattedCode, {
-    ...prettierConfig,
-    parser: 'babel-ts',
-    plugins: [parserBabel],
-  }) : unformattedCode
+  const formattedCode = prettierConfig
+    ? prettier.format(unformattedCode, {
+        ...prettierConfig,
+        parser: 'babel-ts',
+        plugins: [parserBabel],
+      })
+    : unformattedCode
 
   return {
     type: 'success',
@@ -371,21 +321,12 @@ export async function transformNodeInCode<T extends Node, R>(
   }
 }
 
-export function writeTransformationResultToFile(
-  transformResult: TransformNodeResultSuccess<unknown>,
-) {
-  undoFileOnChange(
-    transformResult.file.path,
-    transformResult.file.text,
-    transformResult.code,
-  )
+export function writeTransformationResultToFile(transformResult: TransformNodeResultSuccess<unknown>) {
+  undoFileOnChange(transformResult.file.path, transformResult.file.text, transformResult.code)
   return fsWriteToFile(transformResult.file.fileHandle, transformResult.code)
 }
 
-function findNodeAmongJsxChildren(
-  domNode: Node,
-  parentJsxElement: t.JSXElement,
-) {
+function findNodeAmongJsxChildren(domNode: Node, parentJsxElement: t.JSXElement) {
   const fiber = getReactFiber(domNode)
   const fiberParent = fiber?.return
   if (!fiber || !fiberParent) {
@@ -394,8 +335,7 @@ function findNodeAmongJsxChildren(
 
   const indexInsideParent = fiber.index
 
-  const targetJsxNode =
-    parentJsxElement!.children.filter(isNotEmptyNode)[indexInsideParent]
+  const targetJsxNode = parentJsxElement!.children.filter(isNotEmptyNode)[indexInsideParent]
 
   return targetJsxNode
 }
@@ -405,12 +345,10 @@ function isSourceJsxElement(node: t.JSXElement, fiberSource: FiberSource) {
   const nameLoc = node.openingElement.name.loc
 
   const matchesWithTagStart =
-    tagLoc?.start.line === fiberSource.lineNumber &&
-    tagLoc?.start.column === fiberSource.columnNumber
+    tagLoc?.start.line === fiberSource.lineNumber && tagLoc?.start.column === fiberSource.columnNumber
 
   const matchesWithTagNameStart =
-    nameLoc?.start.line === fiberSource.lineNumber &&
-    nameLoc?.start.column === fiberSource.columnNumber
+    nameLoc?.start.line === fiberSource.lineNumber && nameLoc?.start.column === fiberSource.columnNumber
 
   const isTargetTag = matchesWithTagStart || matchesWithTagNameStart
 
@@ -422,10 +360,7 @@ export function isNotEmptyNode(node: JSXNode) {
     return false
   }
 
-  if (
-    node.type === 'JSXExpressionContainer' &&
-    node.expression.type === 'JSXEmptyExpression'
-  ) {
+  if (node.type === 'JSXExpressionContainer' && node.expression.type === 'JSXEmptyExpression') {
     return false
   }
 

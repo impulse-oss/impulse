@@ -1,9 +1,5 @@
 import { Tab } from '@headlessui/react'
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  XIcon,
-} from '@heroicons/react/solid'
+import { ChevronDownIcon, ChevronRightIcon, XIcon } from '@heroicons/react/solid'
 import animatedScrollTo from 'animated-scroll-to'
 import { Fragment, ReactNode, Ref, useEffect, useRef, useState } from 'react'
 import packageInfo from '../package.json'
@@ -74,9 +70,7 @@ export function NavTreePanelView(props: NavTreePanelProps) {
                   <button
                     className={
                       'outline-none py-1 px-5 ' +
-                      (selected
-                        ? 'border-b-2 border-theme-accent bg-theme-bg'
-                        : 'hover:bg-theme-bg/40')
+                      (selected ? 'border-b-2 border-theme-accent bg-theme-bg' : 'hover:bg-theme-bg/40')
                     }
                   >
                     {tabName}
@@ -96,14 +90,8 @@ export function NavTreePanelView(props: NavTreePanelProps) {
           </button>
         </div>
         <Tab.Panels>
-          <Tab.Panel
-            className="flex outline-none"
-            style={{ height: props.height - 50 }}
-          >
-            <div
-              ref={selectedNodeContainerRef}
-              className="flex-1 p-2 overflow-auto"
-            >
+          <Tab.Panel className="flex outline-none" style={{ height: props.height - 50 }}>
+            <div ref={selectedNodeContainerRef} className="flex-1 p-2 overflow-auto">
               <NavTreeFromNode
                 {...props}
                 node={root!}
@@ -133,10 +121,7 @@ export function NavTreePanelView(props: NavTreePanelProps) {
             </p>
             <p>
               Github:{' '}
-              <Link
-                target="_blank"
-                href="https://github.com/impulse-oss/impulse"
-              >
+              <Link target="_blank" href="https://github.com/impulse-oss/impulse">
                 impulse-oss/impulse
               </Link>
             </p>
@@ -210,10 +195,7 @@ export function NavTreeFromNode({
     return { type: 'collapsed' }
   })()
 
-  const isSelected =
-    node instanceof Node
-      ? node === selectedNode
-      : node.stateNode === selectedNode
+  const isSelected = node instanceof Node ? node === selectedNode : node.stateNode === selectedNode
   const isHovered = node === hoveredNode
 
   const chevron = (() => {
@@ -221,10 +203,8 @@ export function NavTreeFromNode({
       return <div className="w-4"></div>
     }
 
-    const isJsxElement =
-      typeof node.elementType === 'function' || node.tag === 11
-    const isHtmlElement =
-      typeof node.elementType === 'string' && node.stateNode instanceof Element
+    const isJsxElement = typeof node.elementType === 'function' || node.tag === 11
+    const isHtmlElement = typeof node.elementType === 'string' && node.stateNode instanceof Element
 
     if (isJsxElement || isHtmlElement) {
       return (
@@ -278,9 +258,7 @@ export function NavTreeFromNode({
           }
 
           const fiberChild = node.child
-          const children = fiberChild
-            ? fiberGetSiblings(fiberChild)
-            : [...(node.stateNode?.childNodes ?? [])]
+          const children = fiberChild ? fiberGetSiblings(fiberChild) : [...(node.stateNode?.childNodes ?? [])]
 
           // node is a React component
           if (typeof node.elementType === 'function') {
@@ -368,15 +346,9 @@ export function NavTreeFromNode({
           }
 
           // node is a forward ref
-          if (
-            node.tag === 11 &&
-            typeof node.elementType === 'object' &&
-            node.elementType.render
-          ) {
+          if (node.tag === 11 && typeof node.elementType === 'object' && node.elementType.render) {
             const componentName =
-              node.elementType.render.displayName ||
-              node.elementType.render.name ||
-              'UnknownComponent'
+              node.elementType.render.displayName || node.elementType.render.name || 'UnknownComponent'
 
             return (
               <>
@@ -489,9 +461,7 @@ function ElementDetails(props: { node: Node }) {
         .map((attribute, idx) => {
           const attributeValue = (() => {
             if (attribute.name === 'class') {
-              return [...node.classList]
-                .filter((className) => !className.startsWith('__impulse__'))
-                .join(' ')
+              return [...node.classList].filter((className) => !className.startsWith('__impulse__')).join(' ')
             }
 
             return attribute.value

@@ -9,9 +9,7 @@ export async function undoLatestChange(dirHandle: FileSystemDirectoryHandle) {
     localStorage.getItem(undoStorageKey) ?? '{}',
   )
   if (!filePath || !textBeforeChange || !textAfterChange) {
-    cWarn(
-      'No undo action available. Undo is only supported for one latest change',
-    )
+    cWarn('No undo action available. Undo is only supported for one latest change')
     return
   }
 
@@ -34,11 +32,7 @@ export async function undoLatestChange(dirHandle: FileSystemDirectoryHandle) {
   }
 }
 
-export function undoFileOnChange(
-  filePath: string,
-  textBeforeChange: string,
-  textAfterChange: string,
-) {
+export function undoFileOnChange(filePath: string, textBeforeChange: string, textAfterChange: string) {
   localStorage.setItem(
     undoStorageKey,
     JSON.stringify({

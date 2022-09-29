@@ -45,10 +45,7 @@ export function getReactFiber(element: Node) {
     return null
   }
 
-  const wrapInProxy = (
-    fiber: Fiber,
-    params: { isAlternate: boolean },
-  ): Fiber => {
+  const wrapInProxy = (fiber: Fiber, params: { isAlternate: boolean }): Fiber => {
     return new Proxy(fiber, {
       get(target, prop: keyof Fiber) {
         switch (prop) {
@@ -66,10 +63,10 @@ export function getReactFiber(element: Node) {
           case 'sibling':
           case 'child': {
             if (target[prop]) {
-              return wrapInProxy(target[prop]!, {isAlternate: params.isAlternate})
+              return wrapInProxy(target[prop]!, { isAlternate: params.isAlternate })
             }
             if (target.alternate?.[prop]) {
-              return wrapInProxy(target.alternate[prop]!, {isAlternate: !params.isAlternate})
+              return wrapInProxy(target.alternate[prop]!, { isAlternate: !params.isAlternate })
             }
 
             return null
@@ -78,7 +75,7 @@ export function getReactFiber(element: Node) {
           case 'alternate':
           case '_debugOwner': {
             const node = target[prop]
-            return node ? wrapInProxy(node, {isAlternate: params.isAlternate}) : null
+            return node ? wrapInProxy(node, { isAlternate: params.isAlternate }) : null
           }
         }
 

@@ -10,11 +10,7 @@ async function main() {
     build({
       format: 'esm',
       outfile: 'dist/impulse.es.mjs',
-      plugins: [
-        inlineCssPlugin,
-        dtsPlugin({ outDir: 'dist' }),
-        aliasPlugin(aliases),
-      ],
+      plugins: [inlineCssPlugin, dtsPlugin({ outDir: 'dist' }), aliasPlugin(aliases)],
     }),
 
     build({

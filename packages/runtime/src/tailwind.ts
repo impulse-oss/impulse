@@ -21,14 +21,10 @@ export function useTailwind(params: { tailwindConfig: TailwindConfig }) {
   useEffect(() => {
     ;(async () => {
       const tailwindConfigHash = JSON.stringify(tailwindConfig)
-      const tailiwndConfigHashCached = (await indexDb.get(
-        'tailwindConfigHashCached',
-      )) as string
+      const tailiwndConfigHashCached = (await indexDb.get('tailwindConfigHashCached')) as string
 
       if (tailiwndConfigHashCached === tailwindConfigHash) {
-        tailwindClassesRef.current = (await indexDb.get(
-          'tailwindClassesCache',
-        ))!
+        tailwindClassesRef.current = (await indexDb.get('tailwindClassesCache'))!
         return
       }
 
@@ -55,10 +51,7 @@ export function useTailwind(params: { tailwindConfig: TailwindConfig }) {
         postcssResult.root.nodes
           .filter((node) => {
             const singleClassSelectorRegex = /^\.\S+$/
-            return (
-              node.type === 'rule' &&
-              node.selector.match(singleClassSelectorRegex)
-            )
+            return node.type === 'rule' && node.selector.match(singleClassSelectorRegex)
           })
           .map((rule) => {
             rule = rule as Rule

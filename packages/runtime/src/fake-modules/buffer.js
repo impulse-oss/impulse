@@ -1,1 +1,1 @@
-export {Buffer} from 'buffer'
+export { Buffer } from 'buffer'

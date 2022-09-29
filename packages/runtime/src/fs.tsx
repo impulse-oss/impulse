@@ -8,9 +8,7 @@ import { firstValueFrom } from 'rxjs'
 
 export async function fsGetSourceForNode(
   element: Node,
-  requestDirHandle: (params: {
-    mode: FileSystemPermissionMode
-  }) => Promise<FileSystemDirectoryHandle | null>,
+  requestDirHandle: (params: { mode: FileSystemPermissionMode }) => Promise<FileSystemDirectoryHandle | null>,
 ) {
   const cWarn = (...messages: any[]) => warn('fsGetSourceForNode', ...messages)
   const fiber = getReactFiber(element)
@@ -56,9 +54,7 @@ export async function fsGetFileContents(
   const rootPath = await detectRootPath(dirHandle, normalizedPath)
 
   if (!rootPath) {
-    console.log(
-      `Could not find path ${normalizedPath} in the selected directory`,
-    )
+    console.log(`Could not find path ${normalizedPath} in the selected directory`)
     return
   }
 
@@ -66,9 +62,7 @@ export async function fsGetFileContents(
   const fileHandle = await fsGetFile(dirHandle, relativePath)
 
   if (!fileHandle) {
-    console.log(
-      `Could not find path ${normalizedPath} (relative path ${relativePath})`,
-    )
+    console.log(`Could not find path ${normalizedPath} (relative path ${relativePath})`)
     return
   }
 
@@ -102,20 +96,14 @@ export async function fsGetFile(
   return fsGetFile(dir, rest.join('/'))
 }
 
-export async function fsWriteToFile(
-  fileHandle: FileSystemFileHandle,
-  data: string,
-): Promise<void> {
+export async function fsWriteToFile(fileHandle: FileSystemFileHandle, data: string): Promise<void> {
   await fileHandle.requestPermission({ mode: 'readwrite' })
   const writeStream = await fileHandle.createWritable()
   await writeStream.write(data)
   await writeStream.close()
 }
 
-async function detectRootPath(
-  dirHandle: FileSystemDirectoryHandle,
-  fullPath: string,
-) {
+async function detectRootPath(dirHandle: FileSystemDirectoryHandle, fullPath: string) {
   const pathChunks = fullPath.split('/')
 
   const variants = pathChunks.map((_pathChunk, idx) => {
@@ -136,11 +124,7 @@ async function detectRootPath(
   }
 
   if (validVariantFiles.length > 1) {
-    warn(
-      `Multiple root paths found: ${validVariantFiles
-        .map(([variant]) => variant)
-        .join('\n')}`,
-    )
+    warn(`Multiple root paths found: ${validVariantFiles.map(([variant]) => variant).join('\n')}`)
     return null
   }
 
@@ -213,9 +197,7 @@ export function useDirHandle() {
         return handlerFromRef
       }
 
-      const handlerFromIdb = (await get(
-        'dirHandler',
-      )) as FileSystemDirectoryHandle
+      const handlerFromIdb = (await get('dirHandler')) as FileSystemDirectoryHandle
 
       if (handlerFromIdb) {
         dirHandlerRef.current = handlerFromIdb
@@ -230,9 +212,7 @@ export function useDirHandle() {
       return dirHandler
     })()
 
-    if (
-      (await dirHandler.queryPermission({ mode: params.mode })) !== 'granted'
-    ) {
+    if ((await dirHandler.queryPermission({ mode: params.mode })) !== 'granted') {
       const newPermissionState = await dirHandler.requestPermission({
         mode: params.mode,
       })

@@ -76,10 +76,7 @@ export function ImpulseRoot(props: ImpulseParams) {
       >
         <ImpulseApp {...props} />
         <KBarPortal>
-          <KBarPositioner
-            className="impulse-styles theme-solarized-light"
-            style={{ zIndex: 10200 }}
-          >
+          <KBarPositioner className="impulse-styles theme-solarized-light" style={{ zIndex: 10200 }}>
             <div className="w-full max-w-xl overflow-hidden text-base border shadow-lg text-theme-content bg-theme-bg">
               <div className="px-2 pt-2 font-sans">
                 <KBarSearch
@@ -123,10 +120,7 @@ function ImpulseApp(props: ImpulseParams) {
     type: 'elementNotSelected',
   })
 
-  const setSelectedNode = (
-    selectedElement: Node,
-    parameters?: { indexInsideParent?: number },
-  ) => {
+  const setSelectedNode = (selectedElement: Node, parameters?: { indexInsideParent?: number }) => {
     const elementIsPartOfReactTree = !!nodeGetReactRoot(selectedElement)
     if (!elementIsPartOfReactTree) {
       return
@@ -138,8 +132,7 @@ function ImpulseApp(props: ImpulseParams) {
     }
 
     const siblings = Array.from(parentElement.childNodes) as Node[]
-    const indexInsideParent =
-      parameters?.indexInsideParent ?? siblings.indexOf(selectedElement)
+    const indexInsideParent = parameters?.indexInsideParent ?? siblings.indexOf(selectedElement)
 
     setSelectionState({
       type: 'elementSelected',
@@ -202,9 +195,7 @@ function ImpulseApp(props: ImpulseParams) {
 
   useEffect(() => {
     if (selectionState.type === 'elementSelected' && navtreeRef.current) {
-      originalBodyPaddingBottom.current = window.getComputedStyle(
-        document.body,
-      ).paddingBottom
+      originalBodyPaddingBottom.current = window.getComputedStyle(document.body).paddingBottom
       document.body.style.paddingBottom = `${navtreeRef.current.offsetHeight}px`
       return
     }
@@ -217,34 +208,26 @@ function ImpulseApp(props: ImpulseParams) {
       return
     }
 
-    const { observer, parentObserver } = observeNode(
-      selectionState.selectedNode,
-      (records) => {
-        // some of our code adds temporary classes and it's not a good case to rerender
-        if (
-          records.every((record) => {
-            return (
-              record.type === 'attributes' &&
-              record.attributeName === 'class' &&
-              record.target instanceof Element &&
-              [...record.target.classList].find((cl) =>
-                cl.startsWith('__impulse__'),
-              )
-            )
-          })
-        ) {
-          return
-        }
-        onSelectedElementRemoved()
-        rerender()
-      },
-    )
+    const { observer, parentObserver } = observeNode(selectionState.selectedNode, (records) => {
+      // some of our code adds temporary classes and it's not a good case to rerender
+      if (
+        records.every((record) => {
+          return (
+            record.type === 'attributes' &&
+            record.attributeName === 'class' &&
+            record.target instanceof Element &&
+            [...record.target.classList].find((cl) => cl.startsWith('__impulse__'))
+          )
+        })
+      ) {
+        return
+      }
+      onSelectedElementRemoved()
+      rerender()
+    })
 
     const interval = setInterval(() => {
-      if (
-        selectionState.selectedNode &&
-        !document.body.contains(selectionState.selectedNode)
-      ) {
+      if (selectionState.selectedNode && !document.body.contains(selectionState.selectedNode)) {
         warn('selected element is no longer mounted on the page')
         onSelectedElementRemoved()
         rerender()
@@ -285,10 +268,7 @@ function ImpulseApp(props: ImpulseParams) {
         return
       }
 
-      if (
-        parentElement.id === 'impulse-root' ||
-        parentElement.closest('#impulse-root')
-      ) {
+      if (parentElement.id === 'impulse-root' || parentElement.closest('#impulse-root')) {
         return
       }
 
@@ -455,10 +435,7 @@ function ImpulseApp(props: ImpulseParams) {
         console.log('Running test for', rootNode, 'error')
       }
 
-      if (
-        transformResult.type === 'success' &&
-        !transformResult.visitorResult
-      ) {
+      if (transformResult.type === 'success' && !transformResult.visitorResult) {
         console.log('Running test for', rootNode, 'no result')
       }
 
@@ -510,17 +487,13 @@ function ImpulseApp(props: ImpulseParams) {
                   return element !== selectionState.selectedNode
                 })
                 .map((element, idx) => {
-                  return (
-                    <SelectionBoxSibling key={idx} selectedElement={element} />
-                  )
+                  return <SelectionBoxSibling key={idx} selectedElement={element} />
                 })}
             </>
           )}
-          {Array.from(selectionState.selectedNode.childNodes).map(
-            (child, idx) => (
-              <SelectionBoxChild key={idx} selectedNode={child} />
-            ),
-          )}
+          {Array.from(selectionState.selectedNode.childNodes).map((child, idx) => (
+            <SelectionBoxChild key={idx} selectedNode={child} />
+          ))}
           <NavTreePanel
             height={props.config?.panel?.height ?? 350}
             rootRef={navtreeRef}
@@ -585,13 +558,7 @@ function CommandBarController(props: {
   tailwindClasses: TailwindClasses
   transformers: ReturnType<typeof makeTransformers>
 }) {
-  const {
-    getDirHandle,
-    selectionState,
-    classEditor,
-    transformers,
-    editorLinkSchema,
-  } = props
+  const { getDirHandle, selectionState, classEditor, transformers, editorLinkSchema } = props
 
   const { searchQuery } = useKBar((state) => {
     return {
@@ -653,8 +620,7 @@ function CommandBarController(props: {
       }
 
       if (selectedNode.parentElement) {
-        return elementGetOwnerWithSource(selectedNode.parentElement)
-          ?._debugSource
+        return elementGetOwnerWithSource(selectedNode.parentElement)?._debugSource
       }
 
       return null
@@ -707,9 +673,7 @@ function CommandBarController(props: {
       shortcut: ['KeyC'],
       keywords: 'jump code',
       section: sections.general,
-      perform: () =>
-        selectionState.type === 'elementSelected' &&
-        jumpToCode(selectionState.selectedNode),
+      perform: () => selectionState.type === 'elementSelected' && jumpToCode(selectionState.selectedNode),
     },
     jumpToCodeCall: {
       showIf: selectionState.type === 'elementSelected',
@@ -718,13 +682,10 @@ function CommandBarController(props: {
       keywords: 'jump component call',
       section: sections.general,
       perform: () =>
-        selectionState.type === 'elementSelected' &&
-        jumpToComponentCall(selectionState.selectedNode),
+        selectionState.type === 'elementSelected' && jumpToComponentCall(selectionState.selectedNode),
     },
     focusOnClassEditor: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof Element,
+      showIf: selectionState.type === 'elementSelected' && selectionState.selectedNode instanceof Element,
       section: sections.general,
       name: 'Focus on class editor',
       shortcut: ['KeyE'],
@@ -743,31 +704,22 @@ function CommandBarController(props: {
         removeNode(selectionState.selectedNode),
     },
     moveUp: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        !!selectionState.selectedNode.previousSibling,
+      showIf: selectionState.type === 'elementSelected' && !!selectionState.selectedNode.previousSibling,
       name: 'Move up',
       shortcut: ['Shift+KeyK'],
       section: sections.general,
-      perform: () =>
-        selectionState.type === 'elementSelected' &&
-        moveNode(selectionState.selectedNode, 'up'),
+      perform: () => selectionState.type === 'elementSelected' && moveNode(selectionState.selectedNode, 'up'),
     },
     moveDown: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        !!selectionState.selectedNode.nextSibling,
+      showIf: selectionState.type === 'elementSelected' && !!selectionState.selectedNode.nextSibling,
       name: 'Move down',
       shortcut: ['Shift+KeyJ'],
       section: sections.general,
       perform: () =>
-        selectionState.type === 'elementSelected' &&
-        moveNode(selectionState.selectedNode, 'down'),
+        selectionState.type === 'elementSelected' && moveNode(selectionState.selectedNode, 'down'),
     },
     insertDivChild: {
-      showIf:
-        selectionState.type === 'elementSelected' &&
-        selectionState.selectedNode instanceof Element,
+      showIf: selectionState.type === 'elementSelected' && selectionState.selectedNode instanceof Element,
       name: 'Insert child: <div>',
       shortcut: ['KeyI', 'KeyI'],
       section: sections.general,
@@ -814,15 +766,10 @@ function CommandBarController(props: {
           ),
         ),
     },
-    ...(selectionState.type === 'elementSelected' &&
-    selectionState.selectedNode instanceof Element
+    ...(selectionState.type === 'elementSelected' && selectionState.selectedNode instanceof Element
       ? Object.fromEntries(
           htmlTags
-            .filter(
-              (tagName) =>
-                tagName !==
-                (selectionState.selectedNode as Element).tagName.toLowerCase(),
-            )
+            .filter((tagName) => tagName !== (selectionState.selectedNode as Element).tagName.toLowerCase())
             .map((tagName) => [
               `changeTag-${tagName}`,
               {
@@ -901,8 +848,7 @@ function CommandBarController(props: {
       section: sections.general,
       name: 'Undo',
       shortcut: ['$mod+KeyZ'],
-      perform: () =>
-        selectionState.type === 'elementSelected' && tryToUndoLatestChange(),
+      perform: () => selectionState.type === 'elementSelected' && tryToUndoLatestChange(),
     },
   }
 
@@ -928,24 +874,16 @@ function CommandBarResults() {
       onRender={({ item, active }) =>
         typeof item === 'string' ? (
           <div className="pt-2 text-xs uppercase">
-            <span className="flex items-center w-full h-6 px-2 bg-theme-bg-highlight">
-              {item}
-            </span>
+            <span className="flex items-center w-full h-6 px-2 bg-theme-bg-highlight">{item}</span>
           </div>
         ) : (
-          <div
-            className={`flex justify-between px-2 ${
-              active ? 'bg-theme-accent' : ''
-            }`}
-          >
+          <div className={`flex justify-between px-2 ${active ? 'bg-theme-accent' : ''}`}>
             <div>{item.name}</div>
             <div className="flex items-center gap-1">
               {item.shortcut &&
                 item.shortcut.length > 0 &&
                 item.shortcut.map((key, idxItem) => {
-                  const isMac = navigator.platform
-                    .toUpperCase()
-                    .startsWith('MAC')
+                  const isMac = navigator.platform.toUpperCase().startsWith('MAC')
 
                   const keyElements = key.split('+')
                   const symbolReplaceMap: { [key: string]: string } = {
@@ -959,9 +897,7 @@ function CommandBarResults() {
                     <span
                       key={keyElement + idxItem + idx}
                       className={`w-5 text-center uppercase font-mono bg-theme-bg-highlight/90 h-5 inline rounded-md ${
-                        !!symbolReplaceMap[keyElement]
-                          ? 'text-lg leading-5'
-                          : 'text-xs py-1 leading-4'
+                        !!symbolReplaceMap[keyElement] ? 'text-lg leading-5' : 'text-xs py-1 leading-4'
                       }`}
                     >
                       {keyElement
@@ -1028,10 +964,7 @@ function SelectionBoxChild(props: { selectedNode: Node }) {
   )
 }
 
-function makeVscodeLink(
-  { fileName, lineNumber, columnNumber }: FiberSource,
-  schema: string,
-) {
+function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource, schema: string) {
   const fileNameNormalized = normalizePath(fileName)
   return `${schema}://file${fileNameNormalized}:${lineNumber}:${columnNumber}`
 }

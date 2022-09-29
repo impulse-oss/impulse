@@ -28,7 +28,7 @@ function App() {
           tabWidth: 2,
         }}
         tailwindConfig={tailwindConfig}
-        config={{editorLinkSchema: 'vscode', panel: {height: 350}}}
+        config={{ editorLinkSchema: 'vscode', panel: { height: 350 } }}
       />
 
       {/* <Playground /> */}
@@ -85,12 +85,7 @@ function Playground() {
       </Section>
       <Section title="Links">
         <p>
-          <a
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
+          <a href="https://reactjs.org" target="_blank" rel="noopener noreferrer" className="underline">
             Learn React
           </a>
 
@@ -115,13 +110,9 @@ function Playground() {
         <ComponentFragment />
       </Section>
       <Section title="MUI alert">
-        <Alert severity="warning">
-          This is a warning alert — check it out!
-        </Alert>
+        <Alert severity="warning">This is a warning alert — check it out!</Alert>
       </Section>
-      <Section title="a ? b : c">
-        {1 === 1 + 1 ? <div>true</div> : <div>false</div>}
-      </Section>
+      <Section title="a ? b : c">{1 === 1 + 1 ? <div>true</div> : <div>false</div>}</Section>
       <Section title="FIXME Two expressions with space in between">
         <div>
           {'expression1'} {'expression2'}
@@ -165,10 +156,7 @@ function RestaurantPage() {
   return (
     <div className="bg-[#e5e5e5]">
       <div className="w-[375px] mx-auto min-h-screen bg-white">
-        <div
-          className="h-40 p-5"
-          style={{ backgroundImage: `url(${headerImgUrl})` }}
-        >
+        <div className="h-40 p-5" style={{ backgroundImage: `url(${headerImgUrl})` }}>
           <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full">
             <div className="w-1/2 flex flex-col justify-between h-[38%]">
               <div className="border border-black rounded-full"></div>
@@ -179,9 +167,7 @@ function RestaurantPage() {
         </div>
         <h1 className="text-accent-700">ChaCha</h1>
         <div className="py-4 px-5 bg-[#CCFFCB]">
-          <div className="text-lg font-medium">
-            Do you have food preferences?
-          </div>
+          <div className="text-lg font-medium">Do you have food preferences?</div>
           <div className="flex mt-2 gap-4">
             <div className="text-center">
               <div>
@@ -192,8 +178,8 @@ function RestaurantPage() {
               <span className="text-sm">Vegetarian</span>
             </div>
             <div className="leading-tight">
-              Specify what you like or are allergic to, and we'll narrow down
-              the menu to the ones that suit you best
+              Specify what you like or are allergic to, and we'll narrow down the menu to the ones that suit
+              you best
             </div>
           </div>
           <button className="w-full py-3 mt-2 text-lg font-bold text-white bg-green-700 rounded-lg">
@@ -201,9 +187,7 @@ function RestaurantPage() {
           </button>
         </div>
         <div className="mt-6 h-12 bg-[#dadada] flex px-5 pt-2">
-          <div className="flex items-center justify-center grow shrink-0 basis-0">
-            OnSiteOrder
-          </div>
+          <div className="flex items-center justify-center grow shrink-0 basis-0">OnSiteOrder</div>
           <div className="flex items-center justify-center text-center bg-white rounded-t-lg grow shrink-0 basis-0">
             Delivery
           </div>
@@ -219,11 +203,7 @@ function ClassEditorPlayground() {
       <div className="m-8 theme-solarized-light">
         <FakeClassEditorView />
       </div>
-      <img
-        className="max-w-[600px] object-contain"
-        src={vscodeScreenshot}
-        alt="logo"
-      />
+      <img className="max-w-[600px] object-contain" src={vscodeScreenshot} alt="logo" />
     </div>
   )
 }
