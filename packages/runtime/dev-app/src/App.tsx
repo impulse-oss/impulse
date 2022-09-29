@@ -28,7 +28,7 @@ function App() {
           tabWidth: 2,
         }}
         tailwindConfig={tailwindConfig}
-        config={{editorLinkSchema: 'vscode'}}
+        config={{editorLinkSchema: 'vscode', panel: {height: 350}}}
       />
 
       {/* <Playground /> */}
@@ -281,6 +281,7 @@ function NavTreePlayground() {
       <div className="w-2/3 m-8 font-sans text-base theme-solarized-light text-theme-content">
         {ref && (
           <NavTreePanelView
+            height={350}
             rootRef={() => {}}
             selectedNode={ref}
             onNodeClick={() => {}}

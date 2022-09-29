@@ -112,6 +112,9 @@ export type ImpulseParams = {
   tailwindConfig?: any
   config?: {
     editorLinkSchema?: string
+    panel?: {
+      height?: number
+    }
   }
 }
 
@@ -519,6 +522,7 @@ function ImpulseApp(props: ImpulseParams) {
             ),
           )}
           <NavTreePanel
+            height={props.config?.panel?.height ?? 350}
             rootRef={navtreeRef}
             selectedNode={selectionState.selectedNode}
             onNodeClick={(nodeFiber) => {

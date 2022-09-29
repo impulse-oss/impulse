@@ -13,6 +13,7 @@ import { Fiber, fiberGetSiblings, nodeGetReactRoot } from './react-source'
 export type NavTreeNode = Fiber | Node
 
 export type NavTreePanelProps = {
+  height: number
   rootRef: Ref<HTMLDivElement>
   selectedNode: Node
   onNodeClick: (element: NavTreeNode) => void
@@ -24,7 +25,10 @@ export const NavTreePanel = (props: NavTreePanelProps) => {
   return (
     <div
       ref={props.rootRef}
-      className="fixed w-full h-[350px] bottom-0 z-[10050]"
+      className="fixed w-full bottom-0 z-[10050]"
+      style={{
+        height: props.height,
+      }}
     >
       <NavTreePanelView {...props} />
     </div>
@@ -92,7 +96,10 @@ export function NavTreePanelView(props: NavTreePanelProps) {
           </button>
         </div>
         <Tab.Panels>
-          <Tab.Panel className="flex h-[300px] outline-none">
+          <Tab.Panel
+            className="flex outline-none"
+            style={{ height: props.height - 50 }}
+          >
             <div
               ref={selectedNodeContainerRef}
               className="flex-1 p-2 overflow-auto"

@@ -281,6 +281,7 @@ export function ClassEditor({
     const containerRect = listContainerRef.current.getBoundingClientRect()
     const selectedRect = listSelectedElementRef.current.getBoundingClientRect()
 
+    console.log(selectedRect, containerRect)
     if (
       selectedRect.top < containerRect.top ||
       selectedRect.bottom > containerRect.bottom
@@ -366,7 +367,7 @@ export function ClassEditorView(props: {
 
   return (
     <div
-      className="h-full p-2 text-base border-l border-theme-bg-highlight"
+      className="h-full p-2 text-base border-l border-theme-bg-highlight flex flex-col"
       style={{
         width: 400,
         ...props.style,
@@ -415,10 +416,7 @@ export function ClassEditorView(props: {
           }}
         />
       </div>
-      <div
-        ref={props.refs.listContainer}
-        className="h-full overflow-y-auto font-mono"
-      >
+      <div ref={props.refs.listContainer} className="overflow-y-auto font-mono">
         {props.tailwindClassCandidates.map((className) => {
           const isSelected = props.selectedKey === className
 
