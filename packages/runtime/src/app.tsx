@@ -571,7 +571,7 @@ function CommandBarController(props: {
     const source = fiber?._debugSource
 
     if (selectedNode instanceof Element && source) {
-      const vscodeLink = makeVscodeLink(source, editorLinkSchema)
+      const vscodeLink = makeJumpToCodeLink(source, editorLinkSchema)
       window.open(vscodeLink)
       return
     }
@@ -600,7 +600,7 @@ function CommandBarController(props: {
         ? targetJsxNode.openingElement.loc?.start ?? targetJsxNode.loc.start
         : targetJsxNode.loc.end
 
-    const vscodeLink = makeVscodeLink(
+    const vscodeLink = makeJumpToCodeLink(
       {
         fileName: transformResult.file.path,
         lineNumber: loc.line,
@@ -630,7 +630,7 @@ function CommandBarController(props: {
       return
     }
 
-    const vscodeLink = makeVscodeLink(source, editorLinkSchema)
+    const vscodeLink = makeJumpToCodeLink(source, editorLinkSchema)
     window.open(vscodeLink)
     return
   }
@@ -964,8 +964,11 @@ function SelectionBoxChild(props: { selectedNode: Node }) {
   )
 }
 
-function makeVscodeLink({ fileName, lineNumber, columnNumber }: FiberSource, schema: string) {
+function makeJumpToCodeLink({ fileName, lineNumber, columnNumber }: FiberSource, schema: string) {
   const fileNameNormalized = normalizePath(fileName)
+  if (schema === 'webstorm') {
+    return `${schema}://open?file=${fileNameNormalized}&line=${lineNumber}&column=${columnNumber}`
+  }
   return `${schema}://file${fileNameNormalized}:${lineNumber}:${columnNumber}`
 }
 
