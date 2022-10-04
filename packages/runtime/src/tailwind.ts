@@ -21,10 +21,11 @@ export function useTailwind(params: { tailwindConfig: TailwindConfig }) {
   useEffect(() => {
     ;(async () => {
       const tailwindConfigHash = JSON.stringify(tailwindConfig)
-      const tailiwndConfigHashCached = (await indexDb.get('tailwindConfigHashCached')) as string
+      const tailiwndConfigHashCached = await indexDb.get<string>('tailwindConfigHashCached')
 
-      if (tailiwndConfigHashCached === tailwindConfigHash) {
-        tailwindClassesRef.current = (await indexDb.get('tailwindClassesCache'))!
+      const tailwindClassesCached = await indexDb.get('tailwindClassesCache')
+      if (tailiwndConfigHashCached === tailwindConfigHash && tailwindClassesCached) {
+        tailwindClassesRef.current = tailwindClassesCached
         return
       }
 
