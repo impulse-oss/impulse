@@ -11,7 +11,7 @@ import metaImage from '../public/meta-img.png'
 
 const Home: NextPage = () => {
   const metaTitle = 'Impulse – Impossible Dev Tools for React and Tailwind'
-  const tagline = 'Build modern websites right in your browser without giving up on code'
+  const tagline = 'Build modern websites right in your browser on top of your code'
   const metaImageAbs = new URL(metaImage.src, 'https://impulse.dev')
 
   return (
@@ -82,17 +82,14 @@ posthog.init('phc_1lQCwnRxodnRBSr9GQp3TNKghTx9N9bGheH5PiHtS5z',{api_host:'https:
         <section className="flex flex-col items-center max-w-3xl mx-auto">
           <figure>
             <blockquote className="text-theme-content-opaque text-lg mt-6 flex flex-col gap-y-2">
+              <p>Web development has gone a long way!</p>
               <p>
-                Writing HTML <i>sucks</i>.
-              </p>
-              <p>
-                I've been making websites and web apps for almost 10 years. As a developer, I've never liked
-                it.
+                But writing HTML <i>manually</i> still sucks.
               </p>
               <p>
                 React and Tailwind made it an infinitely better experience for me, but something was still
                 missing. Switching between the code and the browser all the time felt wrong. At the same time,
-                I felt lost with No-code editors because they are made for designers not developers.
+                I felt lost with no-code editors because they are made for designers not developers.
               </p>
               <p>
                 Read more:{' '}
@@ -105,10 +102,11 @@ posthog.init('phc_1lQCwnRxodnRBSr9GQp3TNKghTx9N9bGheH5PiHtS5z',{api_host:'https:
               </p>
               <p>
                 Impulse is my experiment to bridge that gap and make a "design" tool that works directly with
-                my code.
+                my code. It's a dev tool that lives entirely in your browser and allows you to inspect and
+                edit (!) your code visually and intuitively.
               </p>
 
-              <p>With Impulse, I've come to love web design.</p>
+              <p>With Impulse, I've come to love fiddling with web UIs again.</p>
             </blockquote>
             <figcaption className="text-right">
               —{' '}
