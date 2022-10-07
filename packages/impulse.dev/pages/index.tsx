@@ -118,7 +118,7 @@ posthog.init('phc_1lQCwnRxodnRBSr9GQp3TNKghTx9N9bGheH5PiHtS5z',{api_host:'https:
         </section>
         <section className="mt-40 max-w-3xl mx-auto">
           <SectionWithMedia
-            videoSrc={['/media/1-jump-to-code.webm', '/media/1-jump-to-code.mp4']}
+            videoSrc={['videos/1-jump-to-code.webm', 'videos/1-jump-to-code.mp4']}
             heading="Jump to code"
             description={
               <>
@@ -134,7 +134,7 @@ posthog.init('phc_1lQCwnRxodnRBSr9GQp3TNKghTx9N9bGheH5PiHtS5z',{api_host:'https:
             }
           />
           <SectionWithMedia
-            videoSrc={['/media/2-class-editor-1.webm', '/media/2-class-editor-1.mp4']}
+            videoSrc={['videos/2-class-editor-1.webm', 'videos/2-class-editor-1.mp4']}
             heading="Preview and add Tailwind classes"
             description={
               <>
@@ -146,7 +146,7 @@ posthog.init('phc_1lQCwnRxodnRBSr9GQp3TNKghTx9N9bGheH5PiHtS5z',{api_host:'https:
             }
           />
           <SectionWithMedia
-            videoSrc={['/media/3-class-editor-2.webm', '/media/3-class-editor-2.mp4']}
+            videoSrc={['videos/3-class-editor-2.webm', 'videos/3-class-editor-2.mp4']}
             heading="Magical autocompletion"
             description={
               <>
@@ -160,7 +160,7 @@ posthog.init('phc_1lQCwnRxodnRBSr9GQp3TNKghTx9N9bGheH5PiHtS5z',{api_host:'https:
             }
           />
           <SectionWithMedia
-            videoSrc={['/media/4-insert.webm', '/media/4-insert.mp4']}
+            videoSrc={['videos/4-insert.webm', 'videos/4-insert.mp4']}
             heading="Write new tags without leaving your browser"
             description={
               <>
@@ -274,7 +274,7 @@ function SectionWithMedia(props: {
         {props.videoSrc && (
           <video ref={videoRef} controls muted loop preload="auto" className="w-full rounded-lg">
             {props.videoSrc.map((src) => (
-              <source key={src} src={src} />
+              <source key={src} src={`https://impulse-dev-media.s3.eu-central-1.amazonaws.com/${src}`} />
             ))}
           </video>
         )}
