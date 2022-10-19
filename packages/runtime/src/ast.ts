@@ -109,18 +109,18 @@ export async function transformNodeInCode<T extends Node, R>(
     // regular JSXElement: rely on its fiber's source
     if (domNode instanceof Element) {
       if (preferAncestor === 'none') {
-        return source && path.isJSXElement() && isSourceJsxElement(path.node, source)
+        return source && path.isJSXElement() && isSourceJsxElement(path.node, file.text, source)
       }
 
       if (shouldLookForOwner) {
         return (
           ownerWithSource?._debugSource &&
           path.isJSXElement() &&
-          isSourceJsxElement(path.node, ownerWithSource._debugSource)
+          isSourceJsxElement(path.node, file.text, ownerWithSource._debugSource)
         )
       }
 
-      return source && path.isJSXElement() && isSourceJsxElement(path.node, source)
+      return source && path.isJSXElement() && isSourceJsxElement(path.node, file.text, source)
     }
 
     // text node is the only child - and it doesn't have a fiber
@@ -142,12 +142,12 @@ export async function transformNodeInCode<T extends Node, R>(
 
       // the text node is the child of a component
       if (parentOwner?._debugSource && parentOwner.memoizedProps?.children === children) {
-        return isSourceJsxElement(path.parentPath.node, parentOwner._debugSource)
+        return isSourceJsxElement(path.parentPath.node, file.text, parentOwner._debugSource)
       }
 
       if (
         parentElementFiber._debugSource &&
-        isSourceJsxElement(path.parentPath.node, parentElementFiber._debugSource)
+        isSourceJsxElement(path.parentPath.node, file.text, parentElementFiber._debugSource)
       ) {
         return true
       }
@@ -181,7 +181,7 @@ export async function transformNodeInCode<T extends Node, R>(
         const siblingJsxElement = parentPath.node.children.filter(isNotEmptyNode)[fiberElementSibling.index]
         if (
           siblingJsxElement?.type !== 'JSXElement' ||
-          !isSourceJsxElement(siblingJsxElement, siblingSource)
+          !isSourceJsxElement(siblingJsxElement, file.text, siblingSource)
         ) {
           return false
         }
@@ -205,7 +205,7 @@ export async function transformNodeInCode<T extends Node, R>(
         return false
       }
 
-      if (!isSourceJsxElement(grandParentPath.node, grandParentSource)) {
+      if (!isSourceJsxElement(grandParentPath.node, file.text, grandParentSource)) {
         return false
       }
 
@@ -229,7 +229,10 @@ export async function transformNodeInCode<T extends Node, R>(
       return false
     }
 
-    if (!parentFiber?._debugSource || !isSourceJsxElement(parentPath.node, parentFiber._debugSource)) {
+    if (
+      !parentFiber?._debugSource ||
+      !isSourceJsxElement(parentPath.node, file.text, parentFiber._debugSource)
+    ) {
       return false
     }
 
@@ -340,15 +343,42 @@ function findNodeAmongJsxChildren(domNode: Node, parentJsxElement: t.JSXElement)
   return targetJsxNode
 }
 
-function isSourceJsxElement(node: t.JSXElement, fiberSource: FiberSource) {
+function isSourceJsxElement(node: t.JSXElement, fileText: string, fiberSource: FiberSource) {
   const tagLoc = node.openingElement.loc
   const nameLoc = node.openingElement.name.loc
 
-  const matchesWithTagStart =
-    tagLoc?.start.line === fiberSource.lineNumber && tagLoc?.start.column === fiberSource.columnNumber
+  // we use recast (as codemod dep) for code transformations
+  // we use react fibers for getting source information from html elements
+  // both (!) produce wrong source information when the source file uses tabs
+  //
+  // read here more on recase: https://github.com/benjamn/recast/issues/683
+  const lineStartsWithTabs = (() => {
+    if (!tagLoc?.start) {
+      return false
+    }
 
-  const matchesWithTagNameStart =
-    nameLoc?.start.line === fiberSource.lineNumber && nameLoc?.start.column === fiberSource.columnNumber
+    const lines = fileText.split('\n')
+    const line = lines[tagLoc.start.line - 1]
+
+    return line.startsWith('\t')
+  })()
+
+  const matchesWithFiber = (loc: t.SourceLocation | null | undefined) => {
+    if (!loc) {
+      return false
+    }
+
+    // if file uses tabs, recase parses 1 tab into 4 spaces internally
+    const fileSourceColumn = loc.start.column / (lineStartsWithTabs ? 4 : 1)
+    // and react fiber counts each tab as 1 point but always adds +1 (don't know why)
+    const fiberSourceColumn = fiberSource.columnNumber - (lineStartsWithTabs ? 1 : 0)
+
+    return loc.start.line === fiberSource.lineNumber && fileSourceColumn === fiberSourceColumn
+  }
+
+  const matchesWithTagStart = matchesWithFiber(tagLoc)
+
+  const matchesWithTagNameStart = matchesWithFiber(nameLoc)
 
   const isTargetTag = matchesWithTagStart || matchesWithTagNameStart
 

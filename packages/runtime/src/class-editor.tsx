@@ -263,7 +263,6 @@ export function ClassEditor({
     const containerRect = listContainerRef.current.getBoundingClientRect()
     const selectedRect = listSelectedElementRef.current.getBoundingClientRect()
 
-    console.log(selectedRect, containerRect)
     if (selectedRect.top < containerRect.top || selectedRect.bottom > containerRect.bottom) {
       animateScrollTo(listSelectedElementRef.current, {
         elementToScroll: listContainerRef.current,
