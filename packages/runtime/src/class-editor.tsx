@@ -1,11 +1,9 @@
 import { ChevronDoubleRightIcon, MinusCircleIcon, PencilIcon } from '@heroicons/react/solid'
 import animateScrollTo from 'animated-scroll-to'
 import fuzzySort from 'fuzzysort'
-import { atom, PrimitiveAtom, useAtom } from 'jotai'
+import { atom, PrimitiveAtom, useAtom, useSetAtom } from 'jotai'
 import { CSSProperties, Ref, useEffect, useMemo, useRef, useState } from 'react'
-import { Observable } from 'rxjs'
 import { elementGetAbsolutePosition } from './dom'
-import { useObservable, useSubject } from './event'
 import { TailwindClassDescription, TailwindClasses } from './tailwind'
 import { makeTransformers } from './transformers'
 
@@ -26,31 +24,47 @@ export function useClassEditor() {
       inputFocused: false,
     }),
   )
+  const setState = useSetAtom(stateAtomRef.current)
 
-  const focus$ = useSubject<void>()
+  const focus = () => {
+    setState((state) => ({
+      ...state,
+      inputFocused: true,
+    }))
+  }
+
+  const blur = () => {
+    setState((state) => ({
+      ...state,
+      inputFocused: false,
+    }))
+  }
 
   return {
     stateAtom: stateAtomRef.current,
-    focus$,
+    focus,
+    blur,
   }
 }
 
 type ClassEditorProps = {
   selectedNode?: Node
   stateAtom: PrimitiveAtom<ClassEditorState>
-  focus$: Observable<void>
   tailwindClasses: TailwindClasses
   transformers: ReturnType<typeof makeTransformers>
   rerender: () => void
+  focus: () => void
+  blur: () => void
 }
 
 export function ClassEditor({
   selectedNode,
   stateAtom,
-  focus$,
   tailwindClasses,
   transformers,
   rerender,
+  focus,
+  blur,
 }: ClassEditorProps) {
   const [state, setState] = useAtom(stateAtom)
 
@@ -204,6 +218,7 @@ export function ClassEditor({
         setState((prev) => ({
           ...prev,
           inputValue: '',
+          inputFocused: false,
         }))
         inputRef.current?.blur()
         return
@@ -248,9 +263,11 @@ export function ClassEditor({
     }
   }, [inputRef.current, listSelectionState, classesToReplace])
 
-  useObservable(focus$, () => {
-    inputRef.current?.focus()
-  })
+  useEffect(() => {
+    if (state.inputFocused) {
+      inputRef.current?.focus()
+    }
+  }, [state.inputFocused])
 
   const listContainerRef = useRef<HTMLDivElement>(null)
   const listSelectedElementRef = useRef<HTMLButtonElement>(null)
@@ -292,15 +309,15 @@ export function ClassEditor({
         })
       }}
       inputOnFocus={() => {
-        setState((prev) => ({ ...prev, inputFocused: true }))
+        focus()
       }}
       inputOnBlur={() => {
-        setState((prev) => ({ ...prev, inputFocused: false }))
+        blur()
       }}
       selectedKey={listSelectionState.selectedKey}
       onItemClick={(className) => {
-        const selectedKey = listSelectionState.selectedKey
-        if (!selectedKey || !(selectedNode instanceof Element)) {
+        focus()
+        if (!(selectedNode instanceof Element)) {
           return
         }
         onClassSelected(className)

@@ -690,7 +690,7 @@ function CommandBarController(props: {
       name: 'Focus on class editor',
       shortcut: ['KeyE'],
       perform: () => {
-        classEditor.focus$.next()
+        classEditor.focus()
       },
     },
     removeElement: {

@@ -1,1 +1,1 @@
-declare module '@impulse.dev/runtime' 
+declare module '@impulse.dev/runtime'

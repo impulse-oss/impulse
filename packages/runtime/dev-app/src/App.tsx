@@ -24,7 +24,7 @@ function App() {
           semi: false,
           trailingComma: 'all',
           singleQuote: true,
-          printWidth: 80,
+          printWidth: 110,
           tabWidth: 2,
         }}
         tailwindConfig={tailwindConfig}
