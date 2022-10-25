@@ -162,7 +162,7 @@ export function makeTransformers(params: {
       return
     }
 
-    if (!(selectedElement instanceof HTMLElement)) {
+    if (!(selectedElement instanceof Element)) {
       await writeTransformationResultToFile(transformResult)
       return
     }

@@ -1,6 +1,6 @@
 export function elementGetAbsolutePosition(node: Node) {
   const rect =
-    node instanceof HTMLElement
+    node instanceof Element
       ? node.getBoundingClientRect()
       : (() => {
           const range = document.createRange()

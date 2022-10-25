@@ -30,6 +30,8 @@ export type ElementTypeProvider = {
   }
 }
 
+const fiberProxyCache = new WeakMap<Fiber, Fiber>()
+
 export function getReactFiber(element: Node) {
   const key = Object.keys(element).find((key) => {
     return key.startsWith('__reactFiber$')
@@ -46,16 +48,15 @@ export function getReactFiber(element: Node) {
   }
 
   const wrapInProxy = (fiber: Fiber, params: { isAlternate: boolean }): Fiber => {
-    return new Proxy(fiber, {
+    const cachedProxy = fiberProxyCache.get(fiber)
+    if (cachedProxy) {
+      return cachedProxy
+    }
+
+    const newProxy = new Proxy(fiber, {
       get(target, prop: keyof Fiber) {
         switch (prop) {
           case '_debugSource':
-            // if (params.isAlternate) {
-            //   return target[prop]
-            // }
-            // if (!target.sibling && target.alternate?.sibling) {
-            //   return target.alternate?.[prop]
-            // }
             if (target.alternate && target.alternate.actualStartTime > target.actualStartTime) {
               return target.alternate?.[prop]
             }
@@ -82,6 +83,10 @@ export function getReactFiber(element: Node) {
         return target[prop]
       },
     })
+
+    fiberProxyCache.set(fiber, newProxy)
+
+    return newProxy
   }
 
   return wrapInProxy(fiber, { isAlternate: false })

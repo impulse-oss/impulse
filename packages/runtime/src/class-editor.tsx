@@ -69,7 +69,7 @@ export function ClassEditor({
   const [state, setState] = useAtom(stateAtom)
 
   useEffect(() => {
-    if (!(selectedNode instanceof HTMLElement)) {
+    if (!(selectedNode instanceof Element)) {
       return
     }
 
@@ -87,7 +87,7 @@ export function ClassEditor({
   const tailwindClassesArray = useMemo(() => Object.keys(tailwindClasses), [tailwindClasses])
 
   const existingClasses =
-    selectedNode instanceof HTMLElement
+    selectedNode instanceof Element
       ? [...selectedNode.classList].filter((className) => !className.startsWith('__impulse__'))
       : []
 

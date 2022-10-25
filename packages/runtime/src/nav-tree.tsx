@@ -48,7 +48,7 @@ export function NavTreePanelView(props: NavTreePanelProps) {
     })
   }
 
-  useEffect(scrollToSelectedElement, [props.selectedNode])
+  useEffect(scrollToSelectedElement, [selectedNodeElementRef.current, selectedNodeContainerRef])
 
   const [hoveredNodes, setHoveredNodes] = useState<NavTreeNode[]>([])
   const hoveredNode = hoveredNodes[hoveredNodes.length - 1]
@@ -427,7 +427,7 @@ function ElementDetails(props: { node: Node }) {
     return str.substring(0, maxLength) + '...'
   }
 
-  if (!(node instanceof HTMLElement) && !(node instanceof SVGElement)) {
+  if (!(node instanceof Element)) {
     const text = node.textContent || '<empty string>'
     return <>"{truncate(text, 50)}"</>
   }
