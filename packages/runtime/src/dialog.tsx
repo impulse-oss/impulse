@@ -15,7 +15,7 @@ export function AlertModal(props: {
       <Transition appear show={isOpen} as={Fragment}>
         <Dialog
           as="div"
-          style={{ display: 'relative', zIndex: 10060 }}
+          style={{ position: 'relative', zIndex: 10060 }}
           className="impulse-styles"
           onClose={onClose}
         >
