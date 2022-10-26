@@ -13,7 +13,12 @@ export function AlertModal(props: {
   return (
     <>
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-[10060] impulse-styles" onClose={onClose}>
+        <Dialog
+          as="div"
+          style={{ display: 'relative', zIndex: 10060 }}
+          className="impulse-styles"
+          onClose={onClose}
+        >
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
