@@ -6,7 +6,10 @@ Build modern websites right in your browser without giving up on code.
 
 Made by [@krogovoy](https://twitter.com/krogovoy) and [@IVolchenskov](https://twitter.com/IVolchenskov)
 
-Impulse allows you to edit your UI right in the browser while automatically changing your code precisely the way you would do it manually. It's like a code editor extension that goes beyond the code editor.
+Impulse was created to work with React websites in dev mode (meaning, running on your localhost).
+
+It allows you to edit your UI right in the browser while automatically changing your code precisely the way you would do it manually.
+It's like a code editor extension that goes beyond the code editor.
 
 - Built into your app: no need to install any extensions or desktop apps
 - No external services, works directly with the code
