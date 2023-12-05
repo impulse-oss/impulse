@@ -22,7 +22,7 @@
   "exports": {
     ".": {
       "import": "./dist/impulse.es.mjs",
-      "type": "./dist/src/index.d.ts"
+      "types": "./dist/src/index.d.ts"
     }
   },
   "scripts": {
